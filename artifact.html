@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- data-base: gol => "data/" relativ (GitHub/Cloudflare Pages). Pentru artefact claude.ai
+     se setează URL-ul absolut al datelor publicate (raw.githubusercontent.com/...). -->
+<meta name="data-base" content="https://raw.githubusercontent.com/COSMINILIESCU/monitor-legislativ-date/main/data/">
+<title>Monitor Legislativ</title>
+<style>
+  /* Paletă preluată de pe pimasociates.ro: magenta #b74f8f, gri #202020/#666, auriu #e09900 */
+  :root{
+    --bg:#f7f6f4; --panel:#ffffff; --ink:#202020; --muted:#666666; --line:#e1e1e1;
+    --brand:#b74f8f; --gold:#e09900; --chip:#f2eef1;
+    --c-MO:#b74f8f; --c-CCR:#cd5c5c; --c-ICCJ:#0c4da2; --c-UE:#006799;
+    --c-dezbatere:#e09900; --c-comentariu:#3f8f55;
+  }
+  .g-MO{--g:var(--c-MO)} .g-CCR{--g:var(--c-CCR)} .g-ICCJ{--g:var(--c-ICCJ)}
+  .g-UE{--g:var(--c-UE)} .g-dezbatere{--g:var(--c-dezbatere)} .g-comentariu{--g:var(--c-comentariu)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+  a{color:var(--c-ICCJ)}
+  header{background:var(--panel);border-bottom:3px solid var(--brand);padding:16px 22px}
+  header h1{margin:0;font:600 22px/1.2 Georgia,"Times New Roman",serif;
+            letter-spacing:.3px;color:var(--ink)}
+  header h1 .pim{color:var(--brand)}
+  header .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  #updated{font-size:12.5px;color:var(--muted);margin-top:2px}
+  #newbadge{display:none;margin-left:10px;background:var(--gold);color:#fff;
+            border-radius:12px;padding:2px 10px;font-size:12px;font-weight:600}
+  .wrap{max-width:1220px;margin:0 auto;padding:16px 18px 40px}
+  /* filtre pe categorii */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+  .fbtn{border:1.5px solid var(--line);background:var(--panel);border-radius:16px;
+        padding:5px 13px;font-size:13px;cursor:pointer;color:var(--ink);font-weight:600}
+  .fbtn.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .fbtn.gc{border-color:var(--g);color:var(--g)}
+  .fbtn.gc.on{background:var(--g);border-color:var(--g);color:#fff}
+  /* layout: [domenii] [calendar] [listă] */
+  .cols{display:grid;grid-template-columns:235px 330px 1fr;gap:18px;
+        grid-template-areas:"dom cal list"}
+  #colDom{grid-area:dom} #colCal{grid-area:cal} #colList{grid-area:list}
+  @media(max-width:1100px){.cols{grid-template-columns:250px 1fr;
+        grid-template-areas:"dom cal" "list list"}}
+  @media(max-width:700px){.cols{grid-template-columns:1fr;
+        grid-template-areas:"cal" "dom" "list"}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  /* calendar */
+  .calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .calhead b{font-family:Georgia,serif;font-size:16px;text-transform:capitalize}
+  .calhead button{border:1px solid var(--line);background:#fff;border-radius:8px;
+                  padding:3px 10px;cursor:pointer;font-size:14px}
+  .calhead button:disabled{opacity:.35;cursor:default}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .dow{font-size:11px;color:var(--muted);text-align:center;padding:2px 0}
+  .day{position:relative;aspect-ratio:1;border:1px solid transparent;border-radius:8px;
+       display:flex;flex-direction:column;align-items:center;justify-content:center;
+       font-size:13px;cursor:default;color:#b5b0ad}
+  .day.in{color:var(--ink);cursor:pointer;border-color:var(--line);background:#fff}
+  .day.in:hover{border-color:var(--brand)}
+  .day.today{outline:2px solid var(--gold)}
+  .day.sel{background:var(--brand);color:#fff}
+  .day .n{font-size:10px;line-height:1;margin-top:2px;color:var(--brand);font-weight:700}
+  .day.sel .n{color:#ffe2b8}
+  .caltip{font-size:12px;color:var(--muted);margin-top:8px}
+  /* panoul de domenii (coloana din extrema stângă) */
+  #dompanelL{position:sticky;top:14px}
+  .domhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .domhead b{font-family:Georgia,serif;font-size:16px}
+  .domhead .actions button{font-size:12px;border:none;background:none;color:var(--brand);
+                           cursor:pointer;text-decoration:underline;padding:0 3px}
+  #domlist label{display:flex;gap:8px;align-items:flex-start;padding:3.5px 2px;
+                 font-size:13px;cursor:pointer;color:var(--ink)}
+  #domlist input{accent-color:var(--brand);margin-top:2px}
+  #domlist label.off{color:var(--muted)}
+  /* listă */
+  #viewtitle{font:600 18px Georgia,serif;margin:2px 0 10px}
+  #viewtitle .reset{font:13px "Segoe UI";margin-left:10px;color:var(--brand);cursor:pointer;text-decoration:underline}
+  .dayhead{font:600 14px Georgia,serif;color:var(--ink);border-bottom:2px solid var(--brand);
+           padding-bottom:4px;margin:20px 0 10px}
+  .sechead{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+           color:var(--g,var(--muted));margin:14px 0 6px}
+  .card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);
+        border-radius:10px;padding:11px 14px;margin-bottom:9px}
+  .card.major{border-left-color:var(--gold);background:#fffaf0}
+  .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px;color:var(--muted)}
+  .badge{background:var(--chip);border-radius:9px;padding:1px 8px;font-size:11px;font-weight:600;color:var(--ink)}
+  .badge.cat{background:var(--g,var(--ink));color:#fff}
+  .badge.mj{background:var(--gold);color:#fff}
+  .card h3{margin:5px 0 4px;font-size:15px;line-height:1.4}
+  .card h3 a{text-decoration:none}
+  .card h3 a:hover{text-decoration:underline}
+  .sum{font-size:13.5px;margin:4px 0 2px}
+  .doms{margin-top:6px;display:flex;flex-wrap:wrap;gap:5px}
+  .doms span{font-size:11px;background:var(--chip);border-radius:8px;padding:1px 8px;color:#7a4a67}
+  details.impact{margin-top:8px;border-top:1px dashed var(--line);padding-top:7px}
+  details.impact summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--brand)}
+  details.impact p{font-size:13.5px;margin:7px 0 2px;white-space:pre-wrap}
+  .empty{color:var(--muted);font-size:14px;padding:26px;text-align:center}
+  #err{display:none;background:#fdf1f1;border:1px solid #e3b8b8;border-radius:10px;
+       padding:12px 16px;margin:14px 0;font-size:13.5px}
+  footer{max-width:1220px;margin:10px auto 30px;padding:0 18px;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="pim">Monitor</span> Legislativ</h1>
+  <div class="sub">Legislație · CCR · ÎCCJ (RIL/HP) · Uniunea Europeană · Acte normative în dezbatere publică · Doctrină</div>
+  <div id="updated">se încarcă…<span id="newbadge"></span></div>
+</header>
+
+<div class="wrap">
+  <div id="err"></div>
+  <div class="filters" id="catbar"></div>
+  <div class="cols">
+    <div id="colDom">
+      <div class="panel" id="dompanelL">
+        <div class="domhead">
+          <b>Domenii</b>
+          <span class="actions"><button id="domall">toate</button>·<button id="domnone">niciunul</button></span>
+        </div>
+        <div id="domlist"></div>
+      </div>
+    </div>
+    <div id="colCal">
+      <div class="panel">
+        <div class="calhead">
+          <button id="prevm" title="luna anterioară">‹</button>
+          <b id="calmonth"></b>
+          <button id="nextm" title="luna următoare">›</button>
+        </div>
+        <div class="grid" id="calgrid"></div>
+        <div class="caltip">Cifra colorată = numărul noutăților din ziua respectivă. Alege o zi pentru detalii.</div>
+      </div>
+    </div>
+    <div id="colList">
+      <div id="viewtitle"></div>
+      <div id="list"></div>
+    </div>
+  </div>
+</div>
+<footer>
+  Conținut agregat automat din surse publice (Monitorul Oficial via legislatie.just.ro, ccr.ro, iccj.ro,
+  EUR-Lex, curia.europa.eu, pagini de transparență decizională, publicații juridice). Rezumatele sunt
+  generate automat și au caracter informativ — verificați întotdeauna textul oficial înainte de a-l invoca.
+</footer>
+
+<script>
+"use strict";
+const DATA_BASE = (document.querySelector('meta[name="data-base"]').content || 'data/');
+const MONTH_RO = ["ianuarie","februarie","martie","aprilie","mai","iunie","iulie",
+                  "august","septembrie","octombrie","noiembrie","decembrie"];
+const DOW = ["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
+const CATS = [
+  {id:"MO",          label:"Legislație RO"},
+  {id:"CCR",         label:"CCR — admiteri"},
+  {id:"ICCJ",        label:"ÎCCJ — RIL & HP"},
+  {id:"UE",          label:"Uniunea Europeană", sub:["UE-JOUE","UE-CJUE","UE-propuneri"]},
+  {id:"dezbatere",   label:"Acte normative în dezbatere publică"},
+  {id:"comentariu",  label:"Comentarii & doctrină"},
+];
+const CAT_LABEL = {"MO":"Monitorul Oficial","CCR":"CCR","ICCJ":"ÎCCJ","UE-JOUE":"JO UE",
+                   "UE-CJUE":"CJUE","UE-propuneri":"Propunere UE","dezbatere":"Dezbatere publică",
+                   "comentariu":"Comentariu"};
+const ACT_LABEL = {"lege":"Lege","oug":"OUG","og":"OG","hg":"HG","ordin":"Ordin",
+  "decizie-ccr-admitere":"Decizie CCR (admitere)","ril":"RIL","hp":"Hotărâre prealabilă",
+  "hotarare-cjue":"Hotărâre CJUE","regulament-ue":"Regulament UE","directiva-ue":"Directivă UE",
+  "decizie-ue":"Decizie UE","propunere-ue":"Propunere UE","proiect-dezbatere":"Proiect în dezbatere",
+  "comentariu":"", "altul":""};
+const catGroup = c => c && c.startsWith("UE") ? "UE" : c;
+
+const state = {
+  index:null, monthCache:{},
+  calYear:0, calMonth:0,           // luna afișată în calendar
+  selDay:null,                     // "YYYY-MM-DD" sau null => flux recent
+  cat:"all", domains:new Set(),    // domeniile bifate (implicit: toate)
+};
+const $ = id => document.getElementById(id);
+const todayISO = () => new Date().toISOString().slice(0,10);
+const fmtDay = iso => { const d=new Date(iso+"T12:00:00");
+  return d.getDate()+" "+MONTH_RO[d.getMonth()]+" "+d.getFullYear(); };
+
+async function getJSON(rel){
+  const r = await fetch(DATA_BASE + rel + "?v=" + Date.now(), {cache:"no-store"});
+  if(!r.ok) throw new Error(rel+" → HTTP "+r.status);
+  return r.json();
+}
+async function getMonth(ym){
+  if(!(ym in state.monthCache)){
+    state.monthCache[ym] = state.index.months.includes(ym) ? await getJSON(ym+".json") : [];
+  }
+  return state.monthCache[ym];
+}
+
+function passFilters(it){
+  if(state.cat !== "all"){
+    const cat = CATS.find(c=>c.id===state.cat);
+    const ids = cat.sub || [cat.id];
+    if(!ids.includes(it.sourceCategory)) return false;
+  }
+  // toate domeniile bifate => fără filtrare (se văd și elementele fără domenii atribuite)
+  if(state.domains.size < state.index.domains.length){
+    if(!(it.domains||[]).some(d=>state.domains.has(d))) return false;
+  }
+  return true;
+}
+
+/* ── randare carduri ── */
+function card(it){
+  const act = ACT_LABEL[it.actType] || "";
+  const g = catGroup(it.sourceCategory);
+  const doms = (it.domains||[]).map(d=>{
+    const dd = state.index.domains.find(x=>x.id===d); return dd?dd.label:d; });
+  return `<div class="card${it.isMajor?" major":""}">
+    <div class="meta">
+      <span class="badge cat g-${g}">${CAT_LABEL[it.sourceCategory]||it.sourceCategory}</span>
+      ${act?`<span class="badge">${act}</span>`:""}
+      ${it.isMajor?`<span class="badge mj">ACT MAJOR</span>`:""}
+      <span>${it.source}</span><span>·</span><span>${fmtDay(it.date)}</span>
+    </div>
+    <h3><a href="${it.url}" target="_blank" rel="noopener">${esc(it.title)}</a></h3>
+    ${it.summary?`<div class="sum">${esc(it.summary)}</div>`:""}
+    ${doms.length?`<div class="doms">${doms.map(d=>`<span>${esc(d)}</span>`).join("")}</div>`:""}
+    ${it.impactAnalysis?`<details class="impact"><summary>Analiză de impact</summary>
+       <p>${esc(it.impactAnalysis)}</p></details>`:""}
+  </div>`;
+}
+const esc = s => (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function renderGrouped(items){
+  if(!items.length) return `<div class="empty">Nimic de afișat pentru filtrele curente.</div>`;
+  let html = "";
+  for(const cat of CATS){
+    const ids = cat.sub || [cat.id];
+    const sub = items.filter(it=>ids.includes(it.sourceCategory));
+    if(!sub.length) continue;
+    html += `<div class="sechead g-${cat.id}">${cat.label} (${sub.length})</div>` + sub.map(card).join("");
+  }
+  return html;
+}
+
+/* ── vizualizări ── */
+async function showDay(iso){
+  state.selDay = iso;
+  $("viewtitle").innerHTML = `Noutățile zilei de ${fmtDay(iso)}
+     <span class="reset" onclick="showRecent()">← înapoi la fluxul recent</span>`;
+  const items = (await getMonth(iso.slice(0,7))).filter(it=>it.date===iso && passFilters(it));
+  $("list").innerHTML = renderGrouped(items);
+  drawCalendar();
+}
+async function showRecent(){
+  state.selDay = null;
+  $("viewtitle").textContent = "Noutățile ultimelor 14 zile";
+  const latest = await getJSON("latest.json").catch(()=>({items:[]}));
+  const items = latest.items.filter(passFilters);
+  if(!items.length){ $("list").innerHTML =
+    `<div class="empty">Nicio noutate în ultimele 14 zile pentru filtrele curente.</div>`; drawCalendar(); return; }
+  const byDay = {};
+  items.forEach(it=>{ (byDay[it.date] ||= []).push(it); });
+  $("list").innerHTML = Object.keys(byDay).sort().reverse().map(d=>
+    `<div class="dayhead">${fmtDay(d)}</div>` + renderGrouped(byDay[d])).join("");
+  drawCalendar();
+}
+window.showRecent = showRecent;
+
+/* ── calendar ── */
+function monthKey(y,m){ return y+"-"+String(m+1).padStart(2,"0"); }
+async function drawCalendar(){
+  const y=state.calYear, m=state.calMonth, ym=monthKey(y,m);
+  $("calmonth").textContent = MONTH_RO[m]+" "+y;
+  const items = await getMonth(ym);
+  const counts = {};
+  items.filter(passFilters).forEach(it=>{ counts[it.date]=(counts[it.date]||0)+1; });
+
+  const first = new Date(y,m,1);
+  const startCol = (first.getDay()+6)%7;           // Luni=0
+  const days = new Date(y,m+1,0).getDate();
+  let html = DOW.map(d=>`<div class="dow">${d}</div>`).join("");
+  for(let i=0;i<startCol;i++) html += `<div class="day"></div>`;
+  const today = todayISO();
+  for(let d=1;d<=days;d++){
+    const iso = ym+"-"+String(d).padStart(2,"0");
+    const cls = ["day","in", iso===today?"today":"", iso===state.selDay?"sel":""].join(" ");
+    html += `<div class="${cls}" data-d="${iso}"><span>${d}</span>` +
+            (counts[iso]?`<span class="n">${counts[iso]}</span>`:"") + `</div>`;
+  }
+  $("calgrid").innerHTML = html;
+  $("calgrid").querySelectorAll(".day.in").forEach(el=>
+    el.addEventListener("click",()=>showDay(el.dataset.d)));
+
+  // navigare limitată la lunile disponibile (retenție 12 luni)
+  const months = state.index.months;
+  const min = months.length?months[0]:ym, max = monthKey(new Date().getFullYear(), new Date().getMonth());
+  $("prevm").disabled = ym<=min; $("nextm").disabled = ym>=max;
+}
+$("prevm").onclick = ()=>{ if(--state.calMonth<0){state.calMonth=11;state.calYear--;} drawCalendar(); };
+$("nextm").onclick = ()=>{ if(++state.calMonth>11){state.calMonth=0;state.calYear++;} drawCalendar(); };
+
+/* ── filtre ── */
+function buildFilters(){
+  // butoanele pe categorii, fiecare cu propria culoare
+  $("catbar").innerHTML = `<button class="fbtn on" data-cat="all">Toate</button>` +
+    CATS.map(c=>`<button class="fbtn gc g-${c.id}" data-cat="${c.id}">${c.label}</button>`).join("");
+  $("catbar").querySelectorAll("[data-cat]").forEach(b=>b.addEventListener("click",()=>{
+    $("catbar").querySelectorAll("[data-cat]").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on"); state.cat=b.dataset.cat; refresh();
+  }));
+
+  // lista verticală de domenii — toate prebifate
+  $("domlist").innerHTML = state.index.domains.map(d=>
+    `<label><input type="checkbox" value="${d.id}" checked> ${d.label}</label>`).join("");
+  $("domlist").addEventListener("change",()=>{
+    state.domains = new Set([...$("domlist").querySelectorAll("input:checked")].map(i=>i.value));
+    $("domlist").querySelectorAll("label").forEach(l=>
+      l.classList.toggle("off", !l.querySelector("input").checked));
+    refresh();
+  });
+  $("domall").onclick = ()=>{ $("domlist").querySelectorAll("input").forEach(i=>i.checked=true);
+    $("domlist").dispatchEvent(new Event("change")); };
+  $("domnone").onclick = ()=>{ $("domlist").querySelectorAll("input").forEach(i=>i.checked=false);
+    $("domlist").dispatchEvent(new Event("change")); };
+}
+function refresh(){ state.selDay ? showDay(state.selDay) : showRecent(); }
+
+/* ── pornire ── */
+(async function init(){
+  const now = new Date();
+  state.calYear = now.getFullYear(); state.calMonth = now.getMonth();
+  try{
+    state.index = await getJSON("index.json");
+  }catch(e){
+    $("err").style.display="block";
+    $("err").innerHTML = `<b>Nu am putut încărca datele dashboard-ului.</b><br>
+      Detaliu tehnic: ${esc(e.message)}. Dacă vezi acest mesaj în artefactul claude.ai,
+      mediul blochează încărcarea datelor externe — folosiți link-ul alternativ al dashboard-ului.`;
+    $("updated").textContent = "date indisponibile";
+    return;
+  }
+  state.domains = new Set(state.index.domains.map(d=>d.id));   // toate prebifate
+  const gen = new Date(state.index.generatedAt);
+  $("updated").firstChild.textContent =
+    "Actualizat: " + gen.getDate()+" "+MONTH_RO[gen.getMonth()]+" "+gen.getFullYear()
+    + ", " + String(gen.getHours()).padStart(2,"0")+":"+String(gen.getMinutes()).padStart(2,"0");
+  // insigna „de la ultima vizită"
+  try{
+    const last = localStorage.getItem("ml_lastVisit");
+    if(last){
+      const latest = await getJSON("latest.json");
+      const n = latest.items.filter(it=>it.date>last.slice(0,10)).length;
+      if(n>0){ const b=$("newbadge"); b.style.display="inline-block";
+               b.textContent = n+" noutăți de la ultima vizită"; }
+    }
+    localStorage.setItem("ml_lastVisit", new Date().toISOString());
+  }catch(_){/* localStorage indisponibil în unele sandbox-uri — ignorăm */}
+  buildFilters();
+  await showRecent();
+})();
+</script>
+</body>
+</html>
