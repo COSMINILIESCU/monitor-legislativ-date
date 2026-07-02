@@ -37,9 +37,14 @@
   .fbtn.on{background:var(--ink);border-color:var(--ink);color:#fff}
   .fbtn.gc{border-color:var(--g);color:var(--g)}
   .fbtn.gc.on{background:var(--g);border-color:var(--g);color:#fff}
-  /* layout */
-  .cols{display:grid;grid-template-columns:330px 1fr;gap:18px}
-  @media(max-width:860px){.cols{grid-template-columns:1fr}}
+  /* layout: [domenii] [calendar] [listă] */
+  .cols{display:grid;grid-template-columns:235px 330px 1fr;gap:18px;
+        grid-template-areas:"dom cal list"}
+  #colDom{grid-area:dom} #colCal{grid-area:cal} #colList{grid-area:list}
+  @media(max-width:1100px){.cols{grid-template-columns:250px 1fr;
+        grid-template-areas:"dom cal" "list list"}}
+  @media(max-width:700px){.cols{grid-template-columns:1fr;
+        grid-template-areas:"cal" "dom" "list"}}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
   /* calendar */
   .calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -59,8 +64,8 @@
   .day .n{font-size:10px;line-height:1;margin-top:2px;color:var(--brand);font-weight:700}
   .day.sel .n{color:#ffe2b8}
   .caltip{font-size:12px;color:var(--muted);margin-top:8px}
-  /* panoul de domenii (stânga, sub calendar) */
-  #dompanelL{margin-top:16px}
+  /* panoul de domenii (coloana din extrema stângă) */
+  #dompanelL{position:sticky;top:14px}
   .domhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
   .domhead b{font-family:Georgia,serif;font-size:16px}
   .domhead .actions button{font-size:12px;border:none;background:none;color:var(--brand);
@@ -109,7 +114,16 @@
   <div id="err"></div>
   <div class="filters" id="catbar"></div>
   <div class="cols">
-    <div>
+    <div id="colDom">
+      <div class="panel" id="dompanelL">
+        <div class="domhead">
+          <b>Domenii</b>
+          <span class="actions"><button id="domall">toate</button>·<button id="domnone">niciunul</button></span>
+        </div>
+        <div id="domlist"></div>
+      </div>
+    </div>
+    <div id="colCal">
       <div class="panel">
         <div class="calhead">
           <button id="prevm" title="luna anterioară">‹</button>
@@ -119,15 +133,8 @@
         <div class="grid" id="calgrid"></div>
         <div class="caltip">Cifra colorată = numărul noutăților din ziua respectivă. Alege o zi pentru detalii.</div>
       </div>
-      <div class="panel" id="dompanelL">
-        <div class="domhead">
-          <b>Domenii</b>
-          <span class="actions"><button id="domall">toate</button>·<button id="domnone">niciunul</button></span>
-        </div>
-        <div id="domlist"></div>
-      </div>
     </div>
-    <div>
+    <div id="colList">
       <div id="viewtitle"></div>
       <div id="list"></div>
     </div>
