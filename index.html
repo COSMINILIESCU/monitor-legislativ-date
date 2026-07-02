@@ -3,42 +3,43 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- data-base: gol => "data/" relativ (Cloudflare/GitHub Pages). Pentru artefact claude.ai
+<!-- data-base: gol => "data/" relativ (GitHub/Cloudflare Pages). Pentru artefact claude.ai
      se setează URL-ul absolut al datelor publicate (raw.githubusercontent.com/...). -->
 <meta name="data-base" content="">
 <title>Monitor Legislativ</title>
 <style>
+  /* Paletă preluată de pe pimasociates.ro: magenta #b74f8f, gri #202020/#666, auriu #e09900 */
   :root{
-    --bg:#f6f5f2; --panel:#ffffff; --ink:#1e2430; --muted:#6b7280; --line:#e4e2dc;
-    --navy:#1f3a5f; --accent:#8c2f39; --gold:#b98a2f; --chip:#eef1f6; --chip-on:#1f3a5f;
+    --bg:#f7f6f4; --panel:#ffffff; --ink:#202020; --muted:#666666; --line:#e1e1e1;
+    --brand:#b74f8f; --gold:#e09900; --chip:#f2eef1;
+    --c-MO:#b74f8f; --c-CCR:#cd5c5c; --c-ICCJ:#0c4da2; --c-UE:#006799;
+    --c-dezbatere:#e09900; --c-comentariu:#3f8f55;
   }
+  .g-MO{--g:var(--c-MO)} .g-CCR{--g:var(--c-CCR)} .g-ICCJ{--g:var(--c-ICCJ)}
+  .g-UE{--g:var(--c-UE)} .g-dezbatere{--g:var(--c-dezbatere)} .g-comentariu{--g:var(--c-comentariu)}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
        font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
-  a{color:var(--navy)}
-  header{background:var(--navy);color:#fff;padding:18px 22px}
-  header h1{margin:0;font:600 22px/1.2 Georgia,"Times New Roman",serif;letter-spacing:.3px}
-  header .sub{opacity:.85;font-size:13px;margin-top:4px}
-  #updated{font-size:12.5px;opacity:.8}
-  #newbadge{display:none;margin-left:10px;background:var(--gold);color:#1e2430;
+  a{color:var(--c-ICCJ)}
+  header{background:var(--panel);border-bottom:3px solid var(--brand);padding:16px 22px}
+  header h1{margin:0;font:600 22px/1.2 Georgia,"Times New Roman",serif;
+            letter-spacing:.3px;color:var(--ink)}
+  header h1 .pim{color:var(--brand)}
+  header .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  #updated{font-size:12.5px;color:var(--muted);margin-top:2px}
+  #newbadge{display:none;margin-left:10px;background:var(--gold);color:#fff;
             border-radius:12px;padding:2px 10px;font-size:12px;font-weight:600}
-  .wrap{max-width:1180px;margin:0 auto;padding:16px 18px 40px}
-  /* filtre */
+  .wrap{max-width:1220px;margin:0 auto;padding:16px 18px 40px}
+  /* filtre pe categorii */
   .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
-  .fbtn{border:1px solid var(--line);background:var(--panel);border-radius:16px;
-        padding:5px 13px;font-size:13px;cursor:pointer;color:var(--ink)}
-  .fbtn.on{background:var(--chip-on);border-color:var(--chip-on);color:#fff}
-  #domwrap{position:relative}
-  #dompanel{display:none;position:absolute;z-index:30;top:36px;left:0;background:var(--panel);
-            border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);
-            padding:12px;width:340px;max-height:340px;overflow:auto}
-  #dompanel label{display:flex;gap:8px;align-items:flex-start;padding:4px 2px;font-size:13.5px;cursor:pointer}
-  #dompanel .actions{display:flex;gap:10px;margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
-  #dompanel .actions button{font-size:12.5px;border:none;background:none;color:var(--navy);
-                            cursor:pointer;text-decoration:underline;padding:0}
+  .fbtn{border:1.5px solid var(--line);background:var(--panel);border-radius:16px;
+        padding:5px 13px;font-size:13px;cursor:pointer;color:var(--ink);font-weight:600}
+  .fbtn.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .fbtn.gc{border-color:var(--g);color:var(--g)}
+  .fbtn.gc.on{background:var(--g);border-color:var(--g);color:#fff}
   /* layout */
   .cols{display:grid;grid-template-columns:330px 1fr;gap:18px}
-  @media(max-width:840px){.cols{grid-template-columns:1fr}}
+  @media(max-width:860px){.cols{grid-template-columns:1fr}}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
   /* calendar */
   .calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -50,47 +51,57 @@
   .dow{font-size:11px;color:var(--muted);text-align:center;padding:2px 0}
   .day{position:relative;aspect-ratio:1;border:1px solid transparent;border-radius:8px;
        display:flex;flex-direction:column;align-items:center;justify-content:center;
-       font-size:13px;cursor:default;color:#9aa0aa}
+       font-size:13px;cursor:default;color:#b5b0ad}
   .day.in{color:var(--ink);cursor:pointer;border-color:var(--line);background:#fff}
-  .day.in:hover{border-color:var(--navy)}
+  .day.in:hover{border-color:var(--brand)}
   .day.today{outline:2px solid var(--gold)}
-  .day.sel{background:var(--navy);color:#fff}
-  .day .n{font-size:10px;line-height:1;margin-top:2px;color:var(--accent);font-weight:700}
-  .day.sel .n{color:#ffd98a}
+  .day.sel{background:var(--brand);color:#fff}
+  .day .n{font-size:10px;line-height:1;margin-top:2px;color:var(--brand);font-weight:700}
+  .day.sel .n{color:#ffe2b8}
   .caltip{font-size:12px;color:var(--muted);margin-top:8px}
+  /* panoul de domenii (stânga, sub calendar) */
+  #dompanelL{margin-top:16px}
+  .domhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .domhead b{font-family:Georgia,serif;font-size:16px}
+  .domhead .actions button{font-size:12px;border:none;background:none;color:var(--brand);
+                           cursor:pointer;text-decoration:underline;padding:0 3px}
+  #domlist label{display:flex;gap:8px;align-items:flex-start;padding:3.5px 2px;
+                 font-size:13px;cursor:pointer;color:var(--ink)}
+  #domlist input{accent-color:var(--brand);margin-top:2px}
+  #domlist label.off{color:var(--muted)}
   /* listă */
   #viewtitle{font:600 18px Georgia,serif;margin:2px 0 10px}
-  #viewtitle .reset{font:13px "Segoe UI";margin-left:10px;color:var(--navy);cursor:pointer;text-decoration:underline}
-  .dayhead{font:600 14px Georgia,serif;color:var(--navy);border-bottom:2px solid var(--navy);
+  #viewtitle .reset{font:13px "Segoe UI";margin-left:10px;color:var(--brand);cursor:pointer;text-decoration:underline}
+  .dayhead{font:600 14px Georgia,serif;color:var(--ink);border-bottom:2px solid var(--brand);
            padding-bottom:4px;margin:20px 0 10px}
   .sechead{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
-           color:var(--muted);margin:14px 0 6px}
+           color:var(--g,var(--muted));margin:14px 0 6px}
   .card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);
         border-radius:10px;padding:11px 14px;margin-bottom:9px}
-  .card.major{border-left-color:var(--gold);background:#fffdf6}
+  .card.major{border-left-color:var(--gold);background:#fffaf0}
   .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px;color:var(--muted)}
-  .badge{background:var(--chip);border-radius:9px;padding:1px 8px;font-size:11px;font-weight:600;color:var(--navy)}
-  .badge.cat{background:var(--navy);color:#fff}
-  .badge.mj{background:var(--gold);color:#1e2430}
+  .badge{background:var(--chip);border-radius:9px;padding:1px 8px;font-size:11px;font-weight:600;color:var(--ink)}
+  .badge.cat{background:var(--g,var(--ink));color:#fff}
+  .badge.mj{background:var(--gold);color:#fff}
   .card h3{margin:5px 0 4px;font-size:15px;line-height:1.4}
   .card h3 a{text-decoration:none}
   .card h3 a:hover{text-decoration:underline}
   .sum{font-size:13.5px;margin:4px 0 2px}
   .doms{margin-top:6px;display:flex;flex-wrap:wrap;gap:5px}
-  .doms span{font-size:11px;background:var(--chip);border-radius:8px;padding:1px 8px;color:#41506b}
+  .doms span{font-size:11px;background:var(--chip);border-radius:8px;padding:1px 8px;color:#7a4a67}
   details.impact{margin-top:8px;border-top:1px dashed var(--line);padding-top:7px}
-  details.impact summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--accent)}
+  details.impact summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--brand)}
   details.impact p{font-size:13.5px;margin:7px 0 2px;white-space:pre-wrap}
   .empty{color:var(--muted);font-size:14px;padding:26px;text-align:center}
   #err{display:none;background:#fdf1f1;border:1px solid #e3b8b8;border-radius:10px;
        padding:12px 16px;margin:14px 0;font-size:13.5px}
-  footer{max-width:1180px;margin:10px auto 30px;padding:0 18px;font-size:12px;color:var(--muted)}
+  footer{max-width:1220px;margin:10px auto 30px;padding:0 18px;font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
 <header>
-  <h1>Monitor Legislativ</h1>
-  <div class="sub">Legislație · CCR · ÎCCJ (RIL/HP) · Uniunea Europeană · Dezbateri publice · Doctrină</div>
+  <h1><span class="pim">Monitor</span> Legislativ</h1>
+  <div class="sub">Legislație · CCR · ÎCCJ (RIL/HP) · Uniunea Europeană · Acte normative în dezbatere publică · Doctrină</div>
   <div id="updated">se încarcă…<span id="newbadge"></span></div>
 </header>
 
@@ -106,7 +117,14 @@
           <button id="nextm" title="luna următoare">›</button>
         </div>
         <div class="grid" id="calgrid"></div>
-        <div class="caltip">Cifra roșie = numărul noutăților din ziua respectivă. Alege o zi pentru detalii.</div>
+        <div class="caltip">Cifra colorată = numărul noutăților din ziua respectivă. Alege o zi pentru detalii.</div>
+      </div>
+      <div class="panel" id="dompanelL">
+        <div class="domhead">
+          <b>Domenii</b>
+          <span class="actions"><button id="domall">toate</button>·<button id="domnone">niciunul</button></span>
+        </div>
+        <div id="domlist"></div>
       </div>
     </div>
     <div>
@@ -116,7 +134,7 @@
   </div>
 </div>
 <footer>
-  Conținut agregat automat din surse publice (Monitorul Oficial via legislatie.just.ro, ccr.ro, scj.ro,
+  Conținut agregat automat din surse publice (Monitorul Oficial via legislatie.just.ro, ccr.ro, iccj.ro,
   EUR-Lex, curia.europa.eu, pagini de transparență decizională, publicații juridice). Rezumatele sunt
   generate automat și au caracter informativ — verificați întotdeauna textul oficial înainte de a-l invoca.
 </footer>
@@ -132,7 +150,7 @@ const CATS = [
   {id:"CCR",         label:"CCR — admiteri"},
   {id:"ICCJ",        label:"ÎCCJ — RIL & HP"},
   {id:"UE",          label:"Uniunea Europeană", sub:["UE-JOUE","UE-CJUE","UE-propuneri"]},
-  {id:"dezbatere",   label:"Dezbateri publice"},
+  {id:"dezbatere",   label:"Acte normative în dezbatere publică"},
   {id:"comentariu",  label:"Comentarii & doctrină"},
 ];
 const CAT_LABEL = {"MO":"Monitorul Oficial","CCR":"CCR","ICCJ":"ÎCCJ","UE-JOUE":"JO UE",
@@ -143,12 +161,13 @@ const ACT_LABEL = {"lege":"Lege","oug":"OUG","og":"OG","hg":"HG","ordin":"Ordin"
   "hotarare-cjue":"Hotărâre CJUE","regulament-ue":"Regulament UE","directiva-ue":"Directivă UE",
   "decizie-ue":"Decizie UE","propunere-ue":"Propunere UE","proiect-dezbatere":"Proiect în dezbatere",
   "comentariu":"", "altul":""};
+const catGroup = c => c && c.startsWith("UE") ? "UE" : c;
 
 const state = {
   index:null, monthCache:{},
-  calYear:0, calMonth:0,           // luna afișată în calendar (monthIndex 0-11)
+  calYear:0, calMonth:0,           // luna afișată în calendar
   selDay:null,                     // "YYYY-MM-DD" sau null => flux recent
-  cat:"all", domains:new Set(),    // filtre
+  cat:"all", domains:new Set(),    // domeniile bifate (implicit: toate)
 };
 const $ = id => document.getElementById(id);
 const todayISO = () => new Date().toISOString().slice(0,10);
@@ -173,7 +192,8 @@ function passFilters(it){
     const ids = cat.sub || [cat.id];
     if(!ids.includes(it.sourceCategory)) return false;
   }
-  if(state.domains.size){
+  // toate domeniile bifate => fără filtrare (se văd și elementele fără domenii atribuite)
+  if(state.domains.size < state.index.domains.length){
     if(!(it.domains||[]).some(d=>state.domains.has(d))) return false;
   }
   return true;
@@ -182,11 +202,12 @@ function passFilters(it){
 /* ── randare carduri ── */
 function card(it){
   const act = ACT_LABEL[it.actType] || "";
+  const g = catGroup(it.sourceCategory);
   const doms = (it.domains||[]).map(d=>{
     const dd = state.index.domains.find(x=>x.id===d); return dd?dd.label:d; });
   return `<div class="card${it.isMajor?" major":""}">
     <div class="meta">
-      <span class="badge cat">${CAT_LABEL[it.sourceCategory]||it.sourceCategory}</span>
+      <span class="badge cat g-${g}">${CAT_LABEL[it.sourceCategory]||it.sourceCategory}</span>
       ${act?`<span class="badge">${act}</span>`:""}
       ${it.isMajor?`<span class="badge mj">ACT MAJOR</span>`:""}
       <span>${it.source}</span><span>·</span><span>${fmtDay(it.date)}</span>
@@ -207,7 +228,7 @@ function renderGrouped(items){
     const ids = cat.sub || [cat.id];
     const sub = items.filter(it=>ids.includes(it.sourceCategory));
     if(!sub.length) continue;
-    html += `<div class="sechead">${cat.label} (${sub.length})</div>` + sub.map(card).join("");
+    html += `<div class="sechead g-${cat.id}">${cat.label} (${sub.length})</div>` + sub.map(card).join("");
   }
   return html;
 }
@@ -271,32 +292,27 @@ $("nextm").onclick = ()=>{ if(++state.calMonth>11){state.calMonth=0;state.calYea
 
 /* ── filtre ── */
 function buildFilters(){
-  let html = `<button class="fbtn on" data-cat="all">Toate</button>` +
-    CATS.map(c=>`<button class="fbtn" data-cat="${c.id}">${c.label}</button>`).join("");
-  html += `<span id="domwrap"><button class="fbtn" id="dombtn">Domenii ▾</button>
-    <div id="dompanel">` +
-    state.index.domains.map(d=>`<label><input type="checkbox" value="${d.id}"> ${d.label}</label>`).join("") +
-    `<div class="actions"><button id="domall">toate</button><button id="domnone">niciunul</button></div>
-    </div></span>`;
-  $("catbar").innerHTML = html;
-
+  // butoanele pe categorii, fiecare cu propria culoare
+  $("catbar").innerHTML = `<button class="fbtn on" data-cat="all">Toate</button>` +
+    CATS.map(c=>`<button class="fbtn gc g-${c.id}" data-cat="${c.id}">${c.label}</button>`).join("");
   $("catbar").querySelectorAll("[data-cat]").forEach(b=>b.addEventListener("click",()=>{
     $("catbar").querySelectorAll("[data-cat]").forEach(x=>x.classList.remove("on"));
     b.classList.add("on"); state.cat=b.dataset.cat; refresh();
   }));
-  $("dombtn").onclick = e=>{ e.stopPropagation();
-    $("dompanel").style.display = $("dompanel").style.display==="block"?"none":"block"; };
-  document.addEventListener("click",e=>{
-    if(!$("domwrap").contains(e.target)) $("dompanel").style.display="none"; });
-  $("dompanel").addEventListener("change",()=>{
-    state.domains = new Set([...$("dompanel").querySelectorAll("input:checked")].map(i=>i.value));
-    $("dombtn").textContent = state.domains.size?`Domenii (${state.domains.size}) ▾`:"Domenii ▾";
-    $("dombtn").classList.toggle("on", state.domains.size>0); refresh();
+
+  // lista verticală de domenii — toate prebifate
+  $("domlist").innerHTML = state.index.domains.map(d=>
+    `<label><input type="checkbox" value="${d.id}" checked> ${d.label}</label>`).join("");
+  $("domlist").addEventListener("change",()=>{
+    state.domains = new Set([...$("domlist").querySelectorAll("input:checked")].map(i=>i.value));
+    $("domlist").querySelectorAll("label").forEach(l=>
+      l.classList.toggle("off", !l.querySelector("input").checked));
+    refresh();
   });
-  $("domall").onclick = ()=>{ $("dompanel").querySelectorAll("input").forEach(i=>i.checked=true);
-    $("dompanel").dispatchEvent(new Event("change")); };
-  $("domnone").onclick = ()=>{ $("dompanel").querySelectorAll("input").forEach(i=>i.checked=false);
-    $("dompanel").dispatchEvent(new Event("change")); };
+  $("domall").onclick = ()=>{ $("domlist").querySelectorAll("input").forEach(i=>i.checked=true);
+    $("domlist").dispatchEvent(new Event("change")); };
+  $("domnone").onclick = ()=>{ $("domlist").querySelectorAll("input").forEach(i=>i.checked=false);
+    $("domlist").dispatchEvent(new Event("change")); };
 }
 function refresh(){ state.selDay ? showDay(state.selDay) : showRecent(); }
 
@@ -314,6 +330,7 @@ function refresh(){ state.selDay ? showDay(state.selDay) : showRecent(); }
     $("updated").textContent = "date indisponibile";
     return;
   }
+  state.domains = new Set(state.index.domains.map(d=>d.id));   // toate prebifate
   const gen = new Date(state.index.generatedAt);
   $("updated").firstChild.textContent =
     "Actualizat: " + gen.getDate()+" "+MONTH_RO[gen.getMonth()]+" "+gen.getFullYear()
