@@ -13,10 +13,11 @@
     --bg:#f7f6f4; --panel:#ffffff; --ink:#202020; --muted:#666666; --line:#e1e1e1;
     --brand:#b74f8f; --gold:#e09900; --chip:#f2eef1;
     --c-MO:#b74f8f; --c-CCR:#cd5c5c; --c-ICCJ:#0c4da2; --c-UE:#006799;
-    --c-dezbatere:#e09900; --c-comentariu:#3f8f55;
+    --c-dezbatere:#e09900; --c-stiri:#5e686e; --c-comentariu:#3f8f55;
   }
   .g-MO{--g:var(--c-MO)} .g-CCR{--g:var(--c-CCR)} .g-ICCJ{--g:var(--c-ICCJ)}
-  .g-UE{--g:var(--c-UE)} .g-dezbatere{--g:var(--c-dezbatere)} .g-comentariu{--g:var(--c-comentariu)}
+  .g-UE{--g:var(--c-UE)} .g-dezbatere{--g:var(--c-dezbatere)}
+  .g-stiri{--g:var(--c-stiri)} .g-comentariu{--g:var(--c-comentariu)}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
        font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
@@ -114,7 +115,7 @@
 <body>
 <header>
   <h1><span class="pim">Monitor</span> Legislativ</h1>
-  <div class="sub">Legislație · CCR · ÎCCJ (RIL/HP) · Uniunea Europeană · Acte normative în dezbatere publică · Doctrină</div>
+  <div class="sub">Legislație · CCR · ÎCCJ (RIL/HP) · Uniunea Europeană · Acte în dezbatere publică · Știri · Doctrină</div>
   <div id="updated">se încarcă…<span id="newbadge"></span></div>
 </header>
 
@@ -171,11 +172,12 @@ const CATS = [
   {id:"ICCJ",        label:"ÎCCJ — RIL & HP"},
   {id:"UE",          label:"Uniunea Europeană", sub:["UE-JOUE","UE-CJUE","UE-propuneri"]},
   {id:"dezbatere",   label:"Acte normative în dezbatere publică"},
+  {id:"stiri",       label:"Știri"},
   {id:"comentariu",  label:"Comentarii & doctrină"},
 ];
 const CAT_LABEL = {"MO":"Monitorul Oficial","CCR":"CCR","ICCJ":"ÎCCJ","UE-JOUE":"JO UE",
                    "UE-CJUE":"CJUE","UE-propuneri":"Propunere UE","dezbatere":"Dezbatere publică",
-                   "comentariu":"Comentariu"};
+                   "stiri":"Știre","comentariu":"Comentariu"};
 const ACT_LABEL = {"lege":"Lege","oug":"OUG","og":"OG","hg":"HG","ordin":"Ordin",
   "decizie-ccr-admitere":"Decizie CCR (admitere)","ril":"RIL","hp":"Hotărâre prealabilă",
   "hotarare-cjue":"Hotărâre CJUE","regulament-ue":"Regulament UE","directiva-ue":"Directivă UE",
