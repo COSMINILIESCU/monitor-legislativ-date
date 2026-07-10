@@ -30,8 +30,16 @@
   #newbadge{display:none;margin-left:10px;background:var(--gold);color:#fff;
             border-radius:12px;padding:2px 10px;font-size:12px;font-weight:600}
   .wrap{max-width:1220px;margin:0 auto;padding:16px 18px 40px}
+  /* căutare */
+  .searchrow{display:flex;gap:6px;align-items:center;margin:14px 0 2px}
+  #q{flex:0 1 460px;border:1.5px solid var(--line);border-radius:18px;padding:7px 14px;
+     font:14px "Segoe UI",system-ui;background:var(--panel);color:var(--ink)}
+  #q:focus{outline:none;border-color:var(--brand)}
+  #qclear{display:none;border:none;background:none;color:var(--muted);cursor:pointer;
+          font-size:17px;padding:2px 6px}
+  mark{background:#ffe08a;color:inherit;padding:0 1px;border-radius:2px}
   /* filtre pe categorii */
-  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 14px}
   .fbtn{border:1.5px solid var(--line);background:var(--panel);border-radius:16px;
         padding:5px 13px;font-size:13px;cursor:pointer;color:var(--ink);font-weight:600}
   .fbtn.on{background:var(--ink);border-color:var(--ink);color:#fff}
@@ -112,6 +120,11 @@
 
 <div class="wrap">
   <div id="err"></div>
+  <div class="searchrow">
+    <input id="q" type="search" autocomplete="off"
+           placeholder='Caută în arhivă: cuvinte sau "expresie exactă"…'>
+    <button id="qclear" title="Șterge căutarea">✕</button>
+  </div>
   <div class="filters" id="catbar"></div>
   <div class="cols">
     <div id="colDom">
@@ -175,7 +188,59 @@ const state = {
   calYear:0, calMonth:0,           // luna afișată în calendar
   selDay:null,                     // "YYYY-MM-DD" sau null => flux recent
   cat:"all", domains:new Set(),    // domeniile bifate (implicit: toate)
+  q:"", pq:null,                   // căutarea curentă (text brut + interogarea parsată)
 };
+
+/* ── căutare: normalizare tolerantă la diacritice + forme flexionate ── */
+// mapare 1:1 caracter-cu-caracter (ș→s, Ă→a...), ca pozițiile să rămână aliniate
+function normStr(s){
+  let out = "";
+  for(const ch of (s||"")) out += ch.normalize("NFD")[0].toLowerCase();
+  return out;
+}
+function parseQuery(q){
+  const phrases = [];
+  let rest = q.replace(/"([^"]+)"/g, (_,p)=>{ phrases.push(normStr(p).trim()); return " "; });
+  const terms = rest.split(/\s+/).map(normStr).filter(t=>t.length>=2).map(t=>{
+    const stem = t.replace(/[aeiou]+$/,"");           // „prescriptie" -> „prescript"
+    return stem.length>=4 ? stem : t;
+  });
+  return (phrases.length || terms.length) ? {phrases, terms} : null;
+}
+function itemHaystack(it){
+  return normStr(it.title + " " + (it.summary||"") + " " +
+                 (it.impactAnalysis||"") + " " + it.source);
+}
+function itemMatches(it){
+  if(!state.pq) return true;
+  const hay = itemHaystack(it);
+  return state.pq.phrases.every(p=>hay.includes(p)) &&
+         state.pq.terms.every(t=>hay.includes(t));
+}
+/* evidențiază termenii găsiți; escaparea HTML se face pe segmente, ca pozițiile să rămână corecte */
+function hilite(text){
+  if(!state.pq || !text) return esc(text);
+  const norm = normStr(text);
+  const ranges = [];
+  for(const pat of [...state.pq.phrases, ...state.pq.terms]){
+    if(!pat) continue;
+    let i = 0;
+    while((i = norm.indexOf(pat, i)) !== -1){ ranges.push([i, i+pat.length]); i += 1; }
+  }
+  if(!ranges.length) return esc(text);
+  ranges.sort((a,b)=>a[0]-b[0]);
+  const merged = [ranges[0]];
+  for(const [s,e] of ranges.slice(1)){
+    const last = merged[merged.length-1];
+    if(s <= last[1]) last[1] = Math.max(last[1], e); else merged.push([s,e]);
+  }
+  let out = "", pos = 0;
+  for(const [s,e] of merged){
+    out += esc(text.slice(pos,s)) + "<mark>" + esc(text.slice(s,e)) + "</mark>";
+    pos = e;
+  }
+  return out + esc(text.slice(pos));
+}
 const $ = id => document.getElementById(id);
 const todayISO = () => new Date().toISOString().slice(0,10);
 const fmtDay = iso => { const d=new Date(iso+"T12:00:00");
@@ -203,6 +268,7 @@ function passFilters(it){
   if(state.domains.size < state.index.domains.length){
     if(!(it.domains||[]).some(d=>state.domains.has(d))) return false;
   }
+  if(!itemMatches(it)) return false;   // căutarea respectă filtrele (rafinare în trepte)
   return true;
 }
 
@@ -219,11 +285,11 @@ function card(it){
       ${it.isMajor?`<span class="badge mj">ACT MAJOR</span>`:""}
       <span>${it.source}</span><span>·</span><span>${fmtDay(it.date)}</span>
     </div>
-    <h3><a href="${it.url}" target="_blank" rel="noopener">${esc(it.title)}</a></h3>
-    ${it.summary?`<div class="sum">${esc(it.summary)}</div>`:""}
+    <h3><a href="${it.url}" target="_blank" rel="noopener">${hilite(it.title)}</a></h3>
+    ${it.summary?`<div class="sum">${hilite(it.summary)}</div>`:""}
     ${doms.length?`<div class="doms">${doms.map(d=>`<span>${esc(d)}</span>`).join("")}</div>`:""}
-    ${it.impactAnalysis?`<details class="impact"><summary>Analiză de impact</summary>
-       <p>${esc(it.impactAnalysis)}</p></details>`:""}
+    ${it.impactAnalysis?`<details class="impact"${state.pq?" open":""}><summary>Analiză de impact</summary>
+       <p>${hilite(it.impactAnalysis)}</p></details>`:""}
   </div>`;
 }
 const esc = s => (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -243,8 +309,9 @@ function renderGrouped(items){
 /* ── vizualizări ── */
 async function showDay(iso){
   state.selDay = iso;
-  $("viewtitle").innerHTML = `Noutățile zilei de ${fmtDay(iso)}
-     <span class="reset" onclick="showRecent()">← înapoi la fluxul recent</span>`;
+  const qNote = state.q ? ` — filtrat după «${esc(state.q)}»` : "";
+  $("viewtitle").innerHTML = `Noutățile zilei de ${fmtDay(iso)}${qNote}
+     <span class="reset" onclick="backToFlow()">← înapoi la fluxul recent</span>`;
   const items = (await getMonth(iso.slice(0,7))).filter(it=>it.date===iso && passFilters(it));
   $("list").innerHTML = renderGrouped(items);
   drawCalendar();
@@ -263,6 +330,32 @@ async function showRecent(){
   drawCalendar();
 }
 window.showRecent = showRecent;
+
+/* căutare în TOATĂ arhiva (toate lunile disponibile), cu respectarea filtrelor */
+async function showSearch(){
+  state.selDay = null;
+  const all = [];
+  for(const ym of state.index.months) all.push(...await getMonth(ym));
+  const items = all.filter(passFilters)
+                   .sort((a,b)=>b.date.localeCompare(a.date));
+  const n = items.length;
+  $("viewtitle").innerHTML =
+    `${n} ${n===1?"rezultat":"rezultate"} pentru «${esc(state.q)}»
+     <span class="reset" onclick="backToFlow()">✕ șterge căutarea</span>`;
+  if(!n){ $("list").innerHTML =
+    `<div class="empty">Niciun rezultat în arhivă pentru căutarea și filtrele curente.
+     Încearcă mai puține cuvinte sau apasă „toate" la domenii.</div>`; drawCalendar(); return; }
+  const byDay = {};
+  items.forEach(it=>{ (byDay[it.date] ||= []).push(it); });
+  $("list").innerHTML = Object.keys(byDay).sort().reverse().map(d=>
+    `<div class="dayhead">${fmtDay(d)}</div>` + renderGrouped(byDay[d])).join("");
+  drawCalendar();
+}
+window.backToFlow = function(){
+  if(state.q){ $("q").value=""; state.q=""; state.pq=null; $("qclear").style.display="none"; }
+  state.selDay = null;
+  refresh();
+};
 
 /* ── calendar ── */
 function monthKey(y,m){ return y+"-"+String(m+1).padStart(2,"0"); }
@@ -321,7 +414,26 @@ function buildFilters(){
   $("domnone").onclick = ()=>{ $("domlist").querySelectorAll("input").forEach(i=>i.checked=false);
     $("domlist").dispatchEvent(new Event("change")); };
 }
-function refresh(){ state.selDay ? showDay(state.selDay) : showRecent(); }
+function refresh(){
+  if(state.selDay) showDay(state.selDay);
+  else if(state.q) showSearch();
+  else showRecent();
+}
+
+/* caseta de căutare: instant, cu mic răgaz la tastare */
+let qTimer = null;
+$("q").addEventListener("input", ()=>{
+  clearTimeout(qTimer);
+  qTimer = setTimeout(()=>{
+    state.q = $("q").value.trim();
+    state.pq = parseQuery(state.q);
+    if(!state.pq) state.q = "";
+    $("qclear").style.display = state.q ? "inline-block" : "none";
+    refresh();
+  }, 250);
+});
+$("q").addEventListener("keydown", e=>{ if(e.key==="Escape") backToFlow(); });
+$("qclear").addEventListener("click", ()=>backToFlow());
 
 /* ── pornire ── */
 (async function init(){
