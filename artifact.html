@@ -1,474 +1,497 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- data-base: gol => "data/" relativ (GitHub/Cloudflare Pages). Pentru artefact claude.ai
-     se setează URL-ul absolut al datelor publicate (raw.githubusercontent.com/...). -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- data-base: gol => "data/" relativ (GitHub Pages). Pentru artefactul claude.ai / versiunea
+     offline se înlocuiește cu URL-ul absolut al datelor publicate. NU șterge acest tag. -->
 <meta name="data-base" content="https://raw.githubusercontent.com/COSMINILIESCU/monitor-legislativ-date/main/data/">
 <title>Monitor Legislativ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  /* Paletă preluată de pe pimasociates.ro: magenta #b74f8f, gri #202020/#666, auriu #e09900 */
-  :root{
-    --bg:#f7f6f4; --panel:#ffffff; --ink:#202020; --muted:#666666; --line:#e1e1e1;
-    --brand:#b74f8f; --gold:#e09900; --chip:#f2eef1;
-    --c-MO:#b74f8f; --c-CCR:#cd5c5c; --c-ICCJ:#0c4da2; --c-UE:#006799;
-    --c-dezbatere:#e09900; --c-stiri:#5e686e; --c-comentariu:#3f8f55;
-  }
-  .g-MO{--g:var(--c-MO)} .g-CCR{--g:var(--c-CCR)} .g-ICCJ{--g:var(--c-ICCJ)}
-  .g-UE{--g:var(--c-UE)} .g-dezbatere{--g:var(--c-dezbatere)}
-  .g-stiri{--g:var(--c-stiri)} .g-comentariu{--g:var(--c-comentariu)}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-       font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
-  a{color:var(--c-ICCJ)}
-  header{background:var(--panel);border-bottom:3px solid var(--brand);padding:16px 22px}
-  header h1{margin:0;font:600 22px/1.2 Georgia,"Times New Roman",serif;
-            letter-spacing:.3px;color:var(--ink)}
-  header h1 .pim{color:var(--brand)}
-  header .sub{color:var(--muted);font-size:13px;margin-top:4px}
-  #updated{font-size:12.5px;color:var(--muted);margin-top:2px}
-  #newbadge{display:none;margin-left:10px;background:var(--gold);color:#fff;
-            border-radius:12px;padding:2px 10px;font-size:12px;font-weight:600}
-  .wrap{max-width:1220px;margin:0 auto;padding:16px 18px 40px}
-  /* căutare */
-  .searchrow{display:flex;gap:6px;align-items:center;margin:14px 0 2px}
-  #q{flex:0 1 460px;border:1.5px solid var(--line);border-radius:18px;padding:7px 14px;
-     font:14px "Segoe UI",system-ui;background:var(--panel);color:var(--ink)}
-  #q:focus{outline:none;border-color:var(--brand)}
-  #qclear{display:none;border:none;background:none;color:var(--muted);cursor:pointer;
-          font-size:17px;padding:2px 6px}
-  mark{background:#ffe08a;color:inherit;padding:0 1px;border-radius:2px}
-  /* filtre pe categorii */
-  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 14px}
-  .fbtn{border:1.5px solid var(--line);background:var(--panel);border-radius:16px;
-        padding:5px 13px;font-size:13px;cursor:pointer;color:var(--ink);font-weight:600}
-  .fbtn.on{background:var(--ink);border-color:var(--ink);color:#fff}
-  .fbtn.gc{border-color:var(--g);color:var(--g)}
-  .fbtn.gc.on{background:var(--g);border-color:var(--g);color:#fff}
-  /* layout: [domenii] [calendar] [listă] */
-  .cols{display:grid;grid-template-columns:235px 330px 1fr;gap:18px;
-        grid-template-areas:"dom cal list"}
-  #colDom{grid-area:dom} #colCal{grid-area:cal} #colList{grid-area:list}
-  @media(max-width:1100px){.cols{grid-template-columns:250px 1fr;
-        grid-template-areas:"dom cal" "list list"}}
-  @media(max-width:700px){.cols{grid-template-columns:1fr;
-        grid-template-areas:"cal" "dom" "list"}}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
-  /* calendar */
-  .calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-  .calhead b{font-family:Georgia,serif;font-size:16px;text-transform:capitalize}
-  .calhead button{border:1px solid var(--line);background:#fff;border-radius:8px;
-                  padding:3px 10px;cursor:pointer;font-size:14px}
-  .calhead button:disabled{opacity:.35;cursor:default}
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-  .dow{font-size:11px;color:var(--muted);text-align:center;padding:2px 0}
-  .day{position:relative;aspect-ratio:1;border:1px solid transparent;border-radius:8px;
-       display:flex;flex-direction:column;align-items:center;justify-content:center;
-       font-size:13px;cursor:default;color:#b5b0ad}
-  .day.in{color:var(--ink);cursor:pointer;border-color:var(--line);background:#fff}
-  .day.in:hover{border-color:var(--brand)}
-  .day.today{outline:2px solid var(--gold)}
-  .day.sel{background:var(--brand);color:#fff}
-  .day .n{font-size:10px;line-height:1;margin-top:2px;color:var(--brand);font-weight:700}
-  .day.sel .n{color:#ffe2b8}
-  .caltip{font-size:12px;color:var(--muted);margin-top:8px}
-  /* panoul de domenii (coloana din extrema stângă) */
-  #dompanelL{position:sticky;top:14px}
-  .domhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-  .domhead b{font-family:Georgia,serif;font-size:16px}
-  .domhead .actions button{font-size:12px;border:none;background:none;color:var(--brand);
-                           cursor:pointer;text-decoration:underline;padding:0 3px}
-  #domlist label{display:flex;gap:8px;align-items:flex-start;padding:3.5px 2px;
-                 font-size:13px;cursor:pointer;color:var(--ink)}
-  #domlist input{accent-color:var(--brand);margin-top:2px}
-  #domlist label.off{color:var(--muted)}
-  /* listă */
-  #viewtitle{font:600 18px Georgia,serif;margin:2px 0 10px}
-  #viewtitle .reset{font:13px "Segoe UI";margin-left:10px;color:var(--brand);cursor:pointer;text-decoration:underline}
-  .dayhead{font:600 14px Georgia,serif;color:var(--ink);border-bottom:2px solid var(--brand);
-           padding-bottom:4px;margin:20px 0 10px}
-  .sechead{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
-           color:var(--g,var(--muted));margin:14px 0 6px}
-  .card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);
-        border-radius:10px;padding:11px 14px;margin-bottom:9px}
-  .card.major{border-left-color:var(--gold);background:#fffaf0}
-  .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px;color:var(--muted)}
-  .badge{background:var(--chip);border-radius:9px;padding:1px 8px;font-size:11px;font-weight:600;color:var(--ink)}
-  .badge.cat{background:var(--g,var(--ink));color:#fff}
-  .badge.mj{background:var(--gold);color:#fff}
-  .card h3{margin:5px 0 4px;font-size:15px;line-height:1.4}
-  .card h3 a{text-decoration:none}
-  .card h3 a:hover{text-decoration:underline}
-  .sum{font-size:13.5px;margin:4px 0 2px}
-  .doms{margin-top:6px;display:flex;flex-wrap:wrap;gap:5px}
-  .doms span{font-size:11px;background:var(--chip);border-radius:8px;padding:1px 8px;color:#7a4a67}
-  details.impact{margin-top:8px;border-top:1px dashed var(--line);padding-top:7px}
-  details.impact summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--brand)}
-  details.impact p{font-size:13.5px;margin:7px 0 2px;white-space:pre-wrap}
-  .empty{color:var(--muted);font-size:14px;padding:26px;text-align:center}
-  #err{display:none;background:#fdf1f1;border:1px solid #e3b8b8;border-radius:10px;
-       padding:12px 16px;margin:14px 0;font-size:13.5px}
-  footer{max-width:1220px;margin:10px auto 30px;padding:0 18px;font-size:12px;color:var(--muted)}
+:root{
+  --bg:#071113; --bg2:#0A171A;
+  --glass:rgba(255,255,255,.045); --glass2:rgba(255,255,255,.085);
+  --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.17);
+  --ink:#EAF6F2; --mut:#93B3AC; --dim:#5F7F79;
+  --ice:#57E6D2; --green:#7CF29B; --blue:#5B9BF6; --magenta:#E85FA8; --amber:#F5B04B; --violet:#9B7CF6; --red:#F97B7B;
+  --r:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 "Inter",sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:rgba(87,230,210,.35)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ice);outline-offset:2px;border-radius:6px}
+
+/* aurora boreală */
+.sky{position:fixed;inset:0;z-index:-1;background:radial-gradient(1100px 560px at 85% -12%,rgba(87,230,210,.13),transparent 60%),radial-gradient(950px 520px at -8% 30%,rgba(124,242,155,.10),transparent 60%),radial-gradient(820px 620px at 60% 112%,rgba(91,155,246,.12),transparent 60%),var(--bg)}
+.sky::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.35) 1px,transparent 1px);background-size:140px 140px;opacity:.07;mask-image:linear-gradient(180deg,#000 0%,transparent 70%)}
+.blob{position:absolute;border-radius:50%;filter:blur(95px);opacity:.5;animation:drift 28s ease-in-out infinite alternate}
+.blob.b1{width:520px;height:520px;background:rgba(87,230,210,.18);top:-190px;right:-120px}
+.blob.b2{width:430px;height:430px;background:rgba(124,242,155,.13);top:40%;left:-210px;animation-delay:-11s}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(42px,58px) scale(1.1)}}
+@media (prefers-reduced-motion:reduce){.blob,*{animation:none!important;transition:none!important}}
+
+.wrap{max-width:1420px;margin:0 auto;padding:0 28px}
+
+/* header */
+header{position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:rgba(7,17,19,.74);border-bottom:1px solid var(--line)}
+.hbar{display:flex;align-items:center;gap:22px;padding:14px 0;flex-wrap:wrap}
+.mark{display:flex;align-items:center;gap:12px}
+.gem{width:38px;height:38px;border-radius:11px;background:conic-gradient(from 200deg,var(--ice),var(--green),var(--blue),var(--ice));display:grid;place-items:center;box-shadow:0 0 26px rgba(87,230,210,.45)}
+.gem span{width:30px;height:30px;border-radius:8px;background:var(--bg);display:grid;place-items:center;font:700 15px "Space Grotesk",sans-serif;color:var(--ice)}
+.mark h1{font:600 21px "Space Grotesk",sans-serif;letter-spacing:.2px}
+.mark h1 b{font-weight:700;background:linear-gradient(90deg,var(--ice),var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+.crumbs{font-size:12px;color:var(--dim);letter-spacing:.3px}
+.live{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:7px 14px;background:var(--glass)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.nb{display:none;margin-left:12px;font:600 11px "Space Grotesk",sans-serif;color:#071113;background:var(--amber);border-radius:99px;padding:4px 11px;box-shadow:0 0 16px rgba(245,176,75,.4)}
+
+/* search + pills */
+.deck{padding:26px 0 8px}
+.search{position:relative;max-width:760px}
+.search input{width:100%;padding:15px 20px 15px 52px;border-radius:16px;border:1px solid var(--line2);background:var(--glass);color:var(--ink);font:15px "Inter",sans-serif;transition:.25s}
+.search input::placeholder{color:var(--dim)}
+.search input:focus{outline:none;border-color:var(--ice);box-shadow:0 0 0 4px rgba(87,230,210,.13),0 0 30px rgba(87,230,210,.12)}
+.search svg{position:absolute;left:19px;top:50%;translate:0 -50%;width:19px;height:19px;stroke:var(--dim)}
+.kbd{position:absolute;right:14px;top:50%;translate:0 -50%;font:500 11px "Space Grotesk",sans-serif;color:var(--dim);border:1px solid var(--line);border-radius:7px;padding:3px 8px}
+.pills{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.pill{display:flex;align-items:center;gap:8px;padding:8px 15px;border-radius:99px;border:1px solid var(--line);background:var(--glass);font:500 13px "Space Grotesk",sans-serif;color:var(--mut);transition:.2s}
+.pill i{width:8px;height:8px;border-radius:3px;background:var(--c,var(--dim));box-shadow:0 0 8px var(--c,transparent)}
+.pill:hover{border-color:var(--line2);color:var(--ink);transform:translateY(-1px)}
+.pill.on{color:var(--ink);border-color:var(--c,var(--ice));background:color-mix(in srgb,var(--c,var(--ice)) 12%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--c,var(--ice)) 25%,transparent)}
+.pill .n{font-size:11px;color:var(--dim);background:rgba(255,255,255,.07);border-radius:99px;padding:1px 7px}
+.pill.on .n{color:var(--ink)}
+
+#err{display:none;margin:20px 0;padding:16px 18px;border:1px solid var(--red);border-radius:14px;background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--ink);font-size:13.5px}
+
+/* grid */
+.grid{display:grid;grid-template-columns:296px minmax(0,1fr) 290px;gap:26px;padding:22px 0 70px;align-items:start}
+.panel{background:var(--glass);border:1px solid var(--line);border-radius:var(--r);backdrop-filter:blur(10px)}
+aside.left,aside.right{position:sticky;top:86px;max-height:calc(100vh - 106px);overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent}
+.ph{display:flex;align-items:baseline;justify-content:space-between;padding:17px 18px 10px}
+.ph h2{font:600 13px "Space Grotesk",sans-serif;letter-spacing:2.2px;text-transform:uppercase;color:var(--mut)}
+.ph .lnk{font-size:11.5px;color:var(--dim)}
+.ph .lnk button:hover{color:var(--ice)}
+
+/* clusters */
+.cluster{padding:3px 12px 9px}
+.cl-h{display:flex;align-items:center;gap:9px;padding:8px 6px 4px;font:600 10.5px "Space Grotesk",sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--dim)}
+.cl-h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--fc),transparent)}
+.cl-h b{color:var(--fc);font-weight:600}
+.dom{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:4.5px 8px;border-radius:9px;color:var(--mut);font-size:12.4px;transition:.18s;border:1px solid transparent}
+.dom:hover{background:var(--glass2);color:var(--ink)}
+.dom .dt{width:7px;height:7px;border-radius:2px;background:var(--fc);flex:none;opacity:.5;transition:.18s}
+.dom .cnt{margin-left:auto;font:600 11px "Space Grotesk",sans-serif;color:var(--dim)}
+.dom.on{color:var(--ink);background:color-mix(in srgb,var(--fc) 10%,transparent);border-color:color-mix(in srgb,var(--fc) 35%,transparent)}
+.dom.on .dt{opacity:1;box-shadow:0 0 8px var(--fc)}
+.dom.on .cnt{color:var(--fc)}
+
+/* ── CALENDAR RADIAL ── */
+.orbwrap{padding:2px 12px 6px;display:grid;place-items:center}
+.orb{width:100%;max-width:262px}
+.orb .ring{fill:none;stroke:rgba(255,255,255,.08);stroke-width:1}
+.orb .tick{stroke:rgba(255,255,255,.12);stroke-width:1}
+.orb .dnum{font:600 8.5px "Space Grotesk",sans-serif;fill:var(--dim)}
+.orb .dnum.hot{fill:var(--ice)}
+.orb .pt{fill:rgba(255,255,255,.14);transition:.2s}
+.orb .pt.has{fill:var(--ice);cursor:pointer;filter:drop-shadow(0 0 5px rgba(87,230,210,.8))}
+.orb .pt.has:hover{fill:var(--green);filter:drop-shadow(0 0 8px rgba(124,242,155,.9))}
+.orb .pt.sel{fill:var(--green);filter:drop-shadow(0 0 10px rgba(124,242,155,1))}
+.orb .halo{fill:none;stroke:var(--ice);stroke-opacity:.22;cursor:pointer}
+.orb .halo.sel{stroke:var(--green);stroke-opacity:.4}
+.orb .today{fill:none;stroke:var(--amber);stroke-width:1.5;stroke-dasharray:2 3}
+.orb .ctitle{font:600 15px "Space Grotesk",sans-serif;fill:var(--ink);text-anchor:middle}
+.orb .csub{font:500 9.5px "Space Grotesk",sans-serif;fill:var(--dim);text-anchor:middle;letter-spacing:1.2px}
+.orb .cbig{font:700 30px "Space Grotesk",sans-serif;fill:var(--ice);text-anchor:middle}
+.orbnav{display:flex;align-items:center;gap:10px;padding:0 18px 8px;justify-content:center}
+.orbnav button{width:28px;height:28px;border-radius:9px;border:1px solid var(--line);background:var(--glass);color:var(--mut);font:600 14px "Space Grotesk",sans-serif;transition:.18s}
+.orbnav button:hover:not(:disabled){color:var(--ice);border-color:var(--ice)}
+.orbnav button:disabled{opacity:.25;cursor:default}
+.orbnav .lbl{font:600 12px "Space Grotesk",sans-serif;color:var(--mut);min-width:118px;text-align:center}
+.calhint{font-size:10.5px;color:var(--dim);text-align:center;padding:0 16px 14px;border-bottom:1px solid var(--line)}
+
+/* mini pulse linear */
+.pulse{padding:12px 18px 14px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:52px;overflow:hidden}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:5px}
+.bar b{display:block;width:100%;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,var(--blue),rgba(91,155,246,.15));min-height:3px;transition:.25s}
+.bar em{font:500 8.5px "Space Grotesk",sans-serif;font-style:normal;color:var(--dim);text-align:center}
+.bar:hover b,.bar.on b{background:linear-gradient(180deg,var(--ice),rgba(87,230,210,.2));box-shadow:0 0 12px rgba(87,230,210,.4)}
+.bar.on em{color:var(--ice)}
+
+/* sources */
+.srcrow{display:flex;align-items:center;gap:10px;padding:7px 18px;font-size:12.5px;color:var(--mut)}
+.srcrow i{width:9px;height:9px;border-radius:3px;background:var(--c);box-shadow:0 0 8px var(--c);flex:none}
+.srcrow .n{margin-left:auto;font:600 12px "Space Grotesk",sans-serif;color:var(--ink)}
+.stat{padding:14px 18px;display:flex;gap:12px;align-items:center;border-top:1px solid var(--line)}
+.stat .big{font:700 26px "Space Grotesk",sans-serif;background:linear-gradient(90deg,var(--ice),var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .lbl{font-size:11.5px;color:var(--mut);line-height:1.35}
+
+/* feed */
+.feedh{display:flex;align-items:baseline;gap:14px;padding:2px 4px 16px;flex-wrap:wrap}
+.feedh h2{font:700 26px "Space Grotesk",sans-serif;letter-spacing:-.3px}
+.feedh span{font-size:12.5px;color:var(--dim)}
+.feedh .clr{font:600 12px "Space Grotesk",sans-serif;color:var(--ice);cursor:pointer;display:none}
+.spine{position:relative;padding-left:34px}
+.spine::before{content:"";position:absolute;left:10px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,var(--ice),var(--green) 45%,var(--blue));opacity:.55;border-radius:2px}
+.day{margin-bottom:8px}
+.day-h{position:relative;display:flex;align-items:center;gap:12px;padding:14px 0 12px}
+.day-h::before{content:"";position:absolute;left:-31px;top:50%;translate:0 -50%;width:13px;height:13px;border-radius:50%;background:var(--bg);border:3px solid var(--ice);box-shadow:0 0 14px rgba(87,230,210,.6)}
+.day-h h3{font:600 16px "Space Grotesk",sans-serif;letter-spacing:.3px}
+.day-h .tag{font:600 10.5px "Space Grotesk",sans-serif;letter-spacing:1.4px;color:var(--dim);text-transform:uppercase}
+.card{position:relative;background:var(--glass);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px 16px;margin-bottom:14px;transition:.22s;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--tc,var(--dim))}
+.card:hover{transform:translateY(-2px);border-color:var(--line2);background:var(--glass2);box-shadow:0 14px 40px rgba(0,0,0,.42),0 0 0 1px color-mix(in srgb,var(--tc) 30%,transparent)}
+.meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.badge{font:700 10px "Space Grotesk",sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#071113;background:var(--tc,var(--dim));padding:4px 10px;border-radius:7px;box-shadow:0 0 14px color-mix(in srgb,var(--tc) 45%,transparent)}
+.badge.major{background:var(--amber);box-shadow:0 0 14px rgba(245,176,75,.5)}
+.src{font-size:12px;color:var(--mut)}
+.when{font-size:12px;color:var(--dim);margin-left:auto;font-family:"Space Grotesk",sans-serif}
+.card h4{font:600 16.5px/1.4 "Space Grotesk",sans-serif;margin-bottom:7px}
+.card h4 a{text-align:left;transition:.2s;text-decoration:none;color:var(--ink)}
+.card h4 a:hover{color:var(--ice)}
+.card p{font-size:13.5px;color:var(--mut);margin-bottom:11px}
+.tags{display:flex;gap:7px;flex-wrap:wrap}
+.tg{font:500 11px "Space Grotesk",sans-serif;color:var(--dc);border:1px solid color-mix(in srgb,var(--dc) 40%,transparent);background:color-mix(in srgb,var(--dc) 9%,transparent);padding:3px 10px;border-radius:99px}
+details.impact{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+details.impact summary{cursor:pointer;font:600 11px "Space Grotesk",sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--amber);list-style:none}
+details.impact summary::-webkit-details-marker{display:none}
+details.impact summary::before{content:"▸ ";color:var(--amber)}
+details.impact[open] summary::before{content:"▾ "}
+details.impact p{margin-top:9px;color:var(--mut);font-size:13px;white-space:pre-wrap}
+mark{background:rgba(245,176,75,.32);color:var(--ink);border-radius:3px;padding:0 2px}
+.empty{padding:50px 20px;text-align:center;color:var(--dim);font-size:14px;display:none}
+.empty b{display:block;font:600 17px "Space Grotesk",sans-serif;color:var(--mut);margin-bottom:6px}
+
+@media(max-width:1180px){.grid{grid-template-columns:270px 1fr}aside.right{display:none}}
+@media(max-width:860px){.grid{grid-template-columns:1fr}aside.left{position:static;max-height:none}.spine{padding-left:26px}.spine::before{left:6px}.day-h::before{left:-27px}}
 </style>
 </head>
 <body>
+<div class="sky"><div class="blob b1"></div><div class="blob b2"></div></div>
+
 <header>
-  <h1><span class="pim">Monitor</span> Legislativ</h1>
-  <div class="sub">Legislație · CCR · ÎCCJ (RIL/HP) · Uniunea Europeană · Acte în dezbatere publică · Doctrină · Știri</div>
-  <div id="updated">se încarcă…<span id="newbadge"></span></div>
+  <div class="wrap hbar">
+    <div class="mark">
+      <div class="gem"><span>ML</span></div>
+      <div>
+        <h1><b>Monitor</b> Legislativ</h1>
+        <div class="crumbs">Legislație · CCR · ÎCCJ (RIL/HP) · Uniunea Europeană · Dezbatere publică · Doctrină · Știri</div>
+      </div>
+    </div>
+    <div class="live"><span class="dot"></span> <span id="updated">se încarcă…</span></div>
+    <span class="nb" id="nb"></span>
+  </div>
 </header>
 
-<div class="wrap">
-  <div id="err"></div>
-  <div class="searchrow">
-    <input id="q" type="search" autocomplete="off"
-           placeholder='Caută în arhivă: cuvinte sau "expresie exactă"…'>
-    <button id="qclear" title="Șterge căutarea">✕</button>
+<div class="wrap deck">
+  <div class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder='Caută în arhivă cuvinte sau „expresie exactă”…' aria-label="Caută în arhivă" autocomplete="off">
+    <span class="kbd">Ctrl K</span>
   </div>
-  <div class="filters" id="catbar"></div>
-  <div class="cols">
-    <div id="colDom">
-      <div class="panel" id="dompanelL">
-        <div class="domhead">
-          <b>Domenii</b>
-          <span class="actions"><button id="domall">toate</button>·<button id="domnone">niciunul</button></span>
-        </div>
-        <div id="domlist"></div>
-      </div>
-    </div>
-    <div id="colCal">
-      <div class="panel">
-        <div class="calhead">
-          <button id="prevm" title="luna anterioară">‹</button>
-          <b id="calmonth"></b>
-          <button id="nextm" title="luna următoare">›</button>
-        </div>
-        <div class="grid" id="calgrid"></div>
-        <div class="caltip">Cifra colorată = numărul noutăților din ziua respectivă. Alege o zi pentru detalii.</div>
-      </div>
-    </div>
-    <div id="colList">
-      <div id="viewtitle"></div>
-      <div id="list"></div>
-    </div>
-  </div>
+  <div class="pills" id="pills" role="group" aria-label="Filtre pe surse"></div>
 </div>
-<footer>
-  Conținut agregat automat din surse publice (Monitorul Oficial via legislatie.just.ro, ccr.ro, iccj.ro,
-  EUR-Lex, curia.europa.eu, pagini de transparență decizională, publicații juridice). Rezumatele sunt
-  generate automat și au caracter informativ — verificați întotdeauna textul oficial înainte de a-l invoca.
-</footer>
+
+<div id="errbox" class="wrap"><div id="err"></div></div>
+
+<div class="wrap grid">
+  <aside class="left panel">
+    <div class="ph"><h2>Domenii</h2><span class="lnk"><button id="allD">toate</button> · <button id="noneD">niciunul</button></span></div>
+    <div id="clusters"></div>
+  </aside>
+
+  <main>
+    <div class="feedh"><h2 id="feedTitle">Noutățile ultimelor 14 zile</h2><span id="count"></span><span class="clr" id="clr" role="button" tabindex="0">✕ înapoi la flux</span></div>
+    <div class="spine" id="feed"></div>
+    <div class="empty" id="empty"><b>Niciun rezultat pe filtrele curente</b>Extinde selecția de domenii sau surse, ori golește căutarea.</div>
+  </main>
+
+  <aside class="right panel">
+    <div class="ph"><h2>Orbita lunii</h2><span class="lnk" id="calReset" style="display:none"><button>golește ziua</button></span></div>
+    <div class="orbnav">
+      <button id="prevM" aria-label="Luna anterioară">‹</button>
+      <span class="lbl" id="orbTitle"></span>
+      <button id="nextM" aria-label="Luna următoare">›</button>
+    </div>
+    <div class="orbwrap"><svg class="orb" id="orb" viewBox="0 0 240 240" role="img" aria-label="Calendar radial al lunii"></svg></div>
+    <div class="calhint">fiecare punct = o zi · punctele aprinse au noutăți · click pentru filtrare · inelul punctat = azi</div>
+    <div class="ph" style="padding-top:14px"><h2>Puls · 14 zile</h2></div>
+    <div class="pulse"><div class="bars" id="bars"></div></div>
+    <div class="ph" style="padding-top:4px"><h2>Surse active</h2></div>
+    <div id="srcs" style="padding-bottom:8px"></div>
+    <div class="stat"><span class="big" id="tot"></span><span class="lbl">acte & materiale<br>în ultimele 14 zile</span></div>
+  </aside>
+</div>
 
 <script>
 "use strict";
-const DATA_BASE = (document.querySelector('meta[name="data-base"]').content || 'data/');
-const MONTH_RO = ["ianuarie","februarie","martie","aprilie","mai","iunie","iulie",
-                  "august","septembrie","octombrie","noiembrie","decembrie"];
-const DOW = ["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
-const CATS = [
-  {id:"MO",          label:"Legislație RO"},
-  {id:"CCR",         label:"CCR — admiteri"},
-  {id:"ICCJ",        label:"ÎCCJ — RIL & HP"},
-  {id:"UE",          label:"Uniunea Europeană", sub:["UE-JOUE","UE-CJUE","UE-propuneri"]},
-  {id:"dezbatere",   label:"Acte normative în dezbatere publică"},
-  {id:"comentariu",  label:"Comentarii & doctrină"},
-  {id:"stiri",       label:"Știri"},   // ultima, atât ca buton cât și ca secțiune în feed
-];
-const CAT_LABEL = {"MO":"Monitorul Oficial","CCR":"CCR","ICCJ":"ÎCCJ","UE-JOUE":"JO UE",
-                   "UE-CJUE":"CJUE","UE-propuneri":"Propunere UE","dezbatere":"Dezbatere publică",
-                   "stiri":"Știre","comentariu":"Comentariu"};
-const ACT_LABEL = {"lege":"Lege","oug":"OUG","og":"OG","hg":"HG","ordin":"Ordin",
-  "decizie-ccr-admitere":"Decizie CCR (admitere)","ril":"RIL","hp":"Hotărâre prealabilă",
-  "hotarare-cjue":"Hotărâre CJUE","regulament-ue":"Regulament UE","directiva-ue":"Directivă UE",
-  "decizie-ue":"Decizie UE","propunere-ue":"Propunere UE","proiect-dezbatere":"Proiect în dezbatere",
-  "comentariu":"", "altul":""};
-const catGroup = c => c && c.startsWith("UE") ? "UE" : c;
+const DATA_BASE=(document.querySelector('meta[name="data-base"]').content||'data/');
 
-const state = {
-  index:null, monthCache:{},
-  calYear:0, calMonth:0,           // luna afișată în calendar
-  selDay:null,                     // "YYYY-MM-DD" sau null => flux recent
-  cat:"all", domains:new Set(),    // domeniile bifate (implicit: toate)
-  q:"", pq:null,                   // căutarea curentă (text brut + interogarea parsată)
-};
+/* categorii de surse (tip) — culorile & ordinea din designul boreal */
+const TYPES={
+ leg:{l:"Legislație RO",c:"#E85FA8"},ccr:{l:"CCR — admiteri",c:"#F97B7B"},
+ iccj:{l:"ÎCCJ — RIL & HP",c:"#5B9BF6"},ue:{l:"Uniunea Europeană",c:"#F5B04B"},
+ dez:{l:"Dezbatere publică",c:"#7CF29B"},doc:{l:"Comentarii & doctrină",c:"#9B7CF6"},
+ stiri:{l:"Știri",c:"#57E6D2"}};
+const TYPE_ORDER=["leg","ccr","iccj","ue","dez","doc","stiri"];  // ordinea în feed (Știri ultima)
+/* familii de domenii (grupare vizuală) */
+const FAM={
+ com:{l:"Comercial & corporate",c:"#9B7CF6"},civ:{l:"Civil & imobiliar",c:"#57E6D2"},
+ pub:{l:"Public & fiscal",c:"#F5B04B"},sec:{l:"Sectorial",c:"#E85FA8"},tec:{l:"Tehnologie & profesie",c:"#7CF29B"}};
+/* cele 18 domenii REALE: id -> [etichetă, cod, familie] */
+const DOMS={
+ societati:["Societăți comerciale","SC","com"],"fuziuni-achizitii":["Fuziuni & achiziții (M&A)","MA","com"],
+ concurenta:["Concurență & ajutor de stat","CO","com"],insolventa:["Insolvență & restructurare","IN","com"],
+ "civil-contracte":["Civil — contracte & obligații","CV","civ"],cadastru:["Cadastru & publicitate imobiliară","CP","civ"],
+ constructii:["Construcții & urbanism","CU","civ"],"procesual-civil":["Drept procesual civil","PC","civ"],
+ "asociatii-fundatii":["Asociații & fundații","AF","civ"],"contencios-administrativ":["Contencios administrativ","CA","pub"],
+ "achizitii-publice":["Achiziții publice","AP","pub"],fiscal:["Fiscal & procedură fiscală","FI","pub"],
+ asigurari:["Asigurări & distribuție de asigurări","AS","sec"],travel:["Turism & travel","TT","sec"],
+ munca:["Dreptul muncii","DM","sec"],"proprietate-intelectuala":["Proprietate intelectuală","PI","tec"],
+ tehnologie:["Tehnologie, cloud & AI","AI","tec"],"profesia-avocat":["Profesia de avocat","PA","tec"]};
 
-/* ── căutare: normalizare tolerantă la diacritice + forme flexionate ── */
-// mapare 1:1 caracter-cu-caracter (ș→s, Ă→a...), ca pozițiile să rămână aliniate
-function normStr(s){
-  let out = "";
-  for(const ch of (s||"")) out += ch.normalize("NFD")[0].toLowerCase();
-  return out;
+const MONL=["","ianuarie","februarie","martie","aprilie","mai","iunie","iulie","august","septembrie","octombrie","noiembrie","decembrie"];
+const fmt=d=>{const[y,m,z]=d.split("-");return `${+z} ${MONL[+m]} ${y}`};
+const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const todayISO=()=>new Date().toISOString().slice(0,10);
+function typeOf(c){
+ if(c==="MO")return "leg"; if(c==="CCR")return "ccr"; if(c==="ICCJ")return "iccj";
+ if(c&&c.indexOf("UE")===0)return "ue"; if(c==="dezbatere")return "dez";
+ if(c==="stiri")return "stiri"; return "doc";
 }
-function parseQuery(q){
-  const phrases = [];
-  let rest = q.replace(/"([^"]+)"/g, (_,p)=>{ phrases.push(normStr(p).trim()); return " "; });
-  const terms = rest.split(/\s+/).map(normStr).filter(t=>t.length>=2).map(t=>{
-    const stem = t.replace(/[aeiou]+$/,"");           // „prescriptie" -> „prescript"
-    return stem.length>=4 ? stem : t;
-  });
-  return (phrases.length || terms.length) ? {phrases, terms} : null;
+
+/* ── căutare: tolerantă la diacritice + flexiuni, sintagme exacte ── */
+function normStr(s){let o="";for(const ch of (s||""))o+=ch.normalize("NFD")[0].toLowerCase();return o;}
+function parseQuery(v){
+ const phrases=[];let rest=v.replace(/"([^"]+)"/g,(_,p)=>{phrases.push(normStr(p).trim());return " ";});
+ const terms=rest.split(/\s+/).map(normStr).filter(t=>t.length>=2).map(t=>{const st=t.replace(/[aeiou]+$/,"");return st.length>=4?st:t;});
+ return (phrases.length||terms.length)?{phrases,terms}:null;
 }
-function itemHaystack(it){
-  return normStr(it.title + " " + (it.summary||"") + " " +
-                 (it.impactAnalysis||"") + " " + it.source);
-}
-function itemMatches(it){
-  if(!state.pq) return true;
-  const hay = itemHaystack(it);
-  return state.pq.phrases.every(p=>hay.includes(p)) &&
-         state.pq.terms.every(t=>hay.includes(t));
-}
-/* evidențiază termenii găsiți; escaparea HTML se face pe segmente, ca pozițiile să rămână corecte */
+function itemHay(i){return normStr(i.title+" "+(i.summary||"")+" "+(i.impactAnalysis||"")+" "+i.source);}
+function itemMatches(i){if(!pq)return true;const h=itemHay(i);return pq.phrases.every(p=>h.includes(p))&&pq.terms.every(t=>h.includes(t));}
 function hilite(text){
-  if(!state.pq || !text) return esc(text);
-  const norm = normStr(text);
-  const ranges = [];
-  for(const pat of [...state.pq.phrases, ...state.pq.terms]){
-    if(!pat) continue;
-    let i = 0;
-    while((i = norm.indexOf(pat, i)) !== -1){ ranges.push([i, i+pat.length]); i += 1; }
-  }
-  if(!ranges.length) return esc(text);
-  ranges.sort((a,b)=>a[0]-b[0]);
-  const merged = [ranges[0]];
-  for(const [s,e] of ranges.slice(1)){
-    const last = merged[merged.length-1];
-    if(s <= last[1]) last[1] = Math.max(last[1], e); else merged.push([s,e]);
-  }
-  let out = "", pos = 0;
-  for(const [s,e] of merged){
-    out += esc(text.slice(pos,s)) + "<mark>" + esc(text.slice(s,e)) + "</mark>";
-    pos = e;
-  }
-  return out + esc(text.slice(pos));
-}
-const $ = id => document.getElementById(id);
-const todayISO = () => new Date().toISOString().slice(0,10);
-const fmtDay = iso => { const d=new Date(iso+"T12:00:00");
-  return d.getDate()+" "+MONTH_RO[d.getMonth()]+" "+d.getFullYear(); };
-
-async function getJSON(rel){
-  const r = await fetch(DATA_BASE + rel + "?v=" + Date.now(), {cache:"no-store"});
-  if(!r.ok) throw new Error(rel+" → HTTP "+r.status);
-  return r.json();
-}
-async function getMonth(ym){
-  if(!(ym in state.monthCache)){
-    state.monthCache[ym] = state.index.months.includes(ym) ? await getJSON(ym+".json") : [];
-  }
-  return state.monthCache[ym];
+ if(!pq||!text)return esc(text);
+ const norm=normStr(text),ranges=[];
+ for(const pat of [...pq.phrases,...pq.terms]){if(!pat)continue;let i=0;while((i=norm.indexOf(pat,i))!==-1){ranges.push([i,i+pat.length]);i+=1;}}
+ if(!ranges.length)return esc(text);
+ ranges.sort((a,b)=>a[0]-b[0]);const merged=[ranges[0]];
+ for(const[s,e]of ranges.slice(1)){const last=merged[merged.length-1];if(s<=last[1])last[1]=Math.max(last[1],e);else merged.push([s,e]);}
+ let out="",pos=0;
+ for(const[s,e]of merged){out+=esc(text.slice(pos,s))+"<mark>"+esc(text.slice(s,e))+"</mark>";pos=e;}
+ return out+esc(text.slice(pos));
 }
 
-function passFilters(it){
-  if(state.cat !== "all"){
-    const cat = CATS.find(c=>c.id===state.cat);
-    const ids = cat.sub || [cat.id];
-    if(!ids.includes(it.sourceCategory)) return false;
-  }
-  // toate domeniile bifate => fără filtrare (se văd și elementele fără domenii atribuite)
-  if(state.domains.size < state.index.domains.length){
-    if(!(it.domains||[]).some(d=>state.domains.has(d))) return false;
-  }
-  if(!itemMatches(it)) return false;   // căutarea respectă filtrele (rafinare în trepte)
-  return true;
+/* ── stare ── */
+let INDEX=null, LATEST={items:[]}, monthCache={}, monthsList=[], calIdx=0;
+let actT=new Set(Object.keys(TYPES)), actD=new Set(Object.keys(DOMS)), actDay=null, q="", pq=null;
+
+async function getJSON(rel){const r=await fetch(DATA_BASE+rel+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(rel+" → HTTP "+r.status);return r.json();}
+async function getMonth(ym){if(!(ym in monthCache))monthCache[ym]=monthsList.includes(ym)?await getJSON(ym+".json"):[];return monthCache[ym];}
+
+function passFilters(i){
+ if(actT.size<Object.keys(TYPES).length && !actT.has(typeOf(i.sourceCategory)))return false;
+ if(actD.size<Object.keys(DOMS).length){ if(!(i.domains||[]).some(d=>actD.has(d)))return false; }
+ if(!itemMatches(i))return false;
+ return true;
 }
 
-/* ── randare carduri ── */
-function card(it){
-  const act = ACT_LABEL[it.actType] || "";
-  const g = catGroup(it.sourceCategory);
-  const doms = (it.domains||[]).map(d=>{
-    const dd = state.index.domains.find(x=>x.id===d); return dd?dd.label:d; });
-  return `<div class="card${it.isMajor?" major":""}">
-    <div class="meta">
-      <span class="badge cat g-${g}">${CAT_LABEL[it.sourceCategory]||it.sourceCategory}</span>
-      ${act?`<span class="badge">${act}</span>`:""}
-      ${it.isMajor?`<span class="badge mj">ACT MAJOR</span>`:""}
-      <span>${it.source}</span><span>·</span><span>${fmtDay(it.date)}</span>
-    </div>
-    <h3><a href="${it.url}" target="_blank" rel="noopener">${hilite(it.title)}</a></h3>
-    ${it.summary?`<div class="sum">${hilite(it.summary)}</div>`:""}
-    ${doms.length?`<div class="doms">${doms.map(d=>`<span>${esc(d)}</span>`).join("")}</div>`:""}
-    ${it.impactAnalysis?`<details class="impact"${state.pq?" open":""}><summary>Analiză de impact</summary>
-       <p>${hilite(it.impactAnalysis)}</p></details>`:""}
-  </div>`;
-}
-const esc = s => (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-
-function renderGrouped(items){
-  if(!items.length) return `<div class="empty">Nimic de afișat pentru filtrele curente.</div>`;
-  let html = "";
-  for(const cat of CATS){
-    const ids = cat.sub || [cat.id];
-    const sub = items.filter(it=>ids.includes(it.sourceCategory));
-    if(!sub.length) continue;
-    html += `<div class="sechead g-${cat.id}">${cat.label} (${sub.length})</div>` + sub.map(card).join("");
-  }
-  return html;
+/* ── pastile surse ── */
+const pills=document.getElementById("pills");
+let allBtn=null;
+function buildPills(){
+ pills.innerHTML="";
+ allBtn=document.createElement("button");allBtn.className="pill on";allBtn.innerHTML=`<i style="--c:#EAF6F2"></i>Toate`;
+ allBtn.onclick=()=>{actT=new Set(Object.keys(TYPES));render();};
+ pills.appendChild(allBtn);
+ Object.entries(TYPES).forEach(([k,v])=>{
+  const n=LATEST.items.filter(i=>typeOf(i.sourceCategory)===k).length;
+  const b=document.createElement("button");b.className="pill on";b.style.setProperty("--c",v.c);b.dataset.k=k;
+  b.innerHTML=`<i></i>${v.l}<span class="n">${n}</span>`;
+  b.onclick=()=>{
+   if(actT.size===Object.keys(TYPES).length)actT=new Set([k]);
+   else if(actT.has(k)){actT.delete(k);if(!actT.size)actT=new Set(Object.keys(TYPES));}
+   else actT.add(k);
+   render();
+  };
+  pills.appendChild(b);
+ });
 }
 
-/* ── vizualizări ── */
-async function showDay(iso){
-  state.selDay = iso;
-  const qNote = state.q ? ` — filtrat după «${esc(state.q)}»` : "";
-  $("viewtitle").innerHTML = `Noutățile zilei de ${fmtDay(iso)}${qNote}
-     <span class="reset" onclick="backToFlow()">← înapoi la fluxul recent</span>`;
-  const items = (await getMonth(iso.slice(0,7))).filter(it=>it.date===iso && passFilters(it));
-  $("list").innerHTML = renderGrouped(items);
-  drawCalendar();
-}
-async function showRecent(){
-  state.selDay = null;
-  $("viewtitle").textContent = "Noutățile ultimelor 14 zile";
-  const latest = await getJSON("latest.json").catch(()=>({items:[]}));
-  const items = latest.items.filter(passFilters);
-  if(!items.length){ $("list").innerHTML =
-    `<div class="empty">Nicio noutate în ultimele 14 zile pentru filtrele curente.</div>`; drawCalendar(); return; }
-  const byDay = {};
-  items.forEach(it=>{ (byDay[it.date] ||= []).push(it); });
-  $("list").innerHTML = Object.keys(byDay).sort().reverse().map(d=>
-    `<div class="dayhead">${fmtDay(d)}</div>` + renderGrouped(byDay[d])).join("");
-  drawCalendar();
-}
-window.showRecent = showRecent;
-
-/* căutare în TOATĂ arhiva (toate lunile disponibile), cu respectarea filtrelor */
-async function showSearch(){
-  state.selDay = null;
-  const all = [];
-  for(const ym of state.index.months) all.push(...await getMonth(ym));
-  const items = all.filter(passFilters)
-                   .sort((a,b)=>b.date.localeCompare(a.date));
-  const n = items.length;
-  $("viewtitle").innerHTML =
-    `${n} ${n===1?"rezultat":"rezultate"} pentru «${esc(state.q)}»
-     <span class="reset" onclick="backToFlow()">✕ șterge căutarea</span>`;
-  if(!n){ $("list").innerHTML =
-    `<div class="empty">Niciun rezultat în arhivă pentru căutarea și filtrele curente.
-     Încearcă mai puține cuvinte sau apasă „toate" la domenii.</div>`; drawCalendar(); return; }
-  const byDay = {};
-  items.forEach(it=>{ (byDay[it.date] ||= []).push(it); });
-  $("list").innerHTML = Object.keys(byDay).sort().reverse().map(d=>
-    `<div class="dayhead">${fmtDay(d)}</div>` + renderGrouped(byDay[d])).join("");
-  drawCalendar();
-}
-window.backToFlow = function(){
-  if(state.q){ $("q").value=""; state.q=""; state.pq=null; $("qclear").style.display="none"; }
-  state.selDay = null;
-  refresh();
-};
-
-/* ── calendar ── */
-function monthKey(y,m){ return y+"-"+String(m+1).padStart(2,"0"); }
-async function drawCalendar(){
-  const y=state.calYear, m=state.calMonth, ym=monthKey(y,m);
-  $("calmonth").textContent = MONTH_RO[m]+" "+y;
-  const items = await getMonth(ym);
-  const counts = {};
-  items.filter(passFilters).forEach(it=>{ counts[it.date]=(counts[it.date]||0)+1; });
-
-  const first = new Date(y,m,1);
-  const startCol = (first.getDay()+6)%7;           // Luni=0
-  const days = new Date(y,m+1,0).getDate();
-  let html = DOW.map(d=>`<div class="dow">${d}</div>`).join("");
-  for(let i=0;i<startCol;i++) html += `<div class="day"></div>`;
-  const today = todayISO();
-  for(let d=1;d<=days;d++){
-    const iso = ym+"-"+String(d).padStart(2,"0");
-    const cls = ["day","in", iso===today?"today":"", iso===state.selDay?"sel":""].join(" ");
-    html += `<div class="${cls}" data-d="${iso}"><span>${d}</span>` +
-            (counts[iso]?`<span class="n">${counts[iso]}</span>`:"") + `</div>`;
-  }
-  $("calgrid").innerHTML = html;
-  $("calgrid").querySelectorAll(".day.in").forEach(el=>
-    el.addEventListener("click",()=>showDay(el.dataset.d)));
-
-  // navigare limitată la lunile disponibile (retenție 12 luni)
-  const months = state.index.months;
-  const min = months.length?months[0]:ym, max = monthKey(new Date().getFullYear(), new Date().getMonth());
-  $("prevm").disabled = ym<=min; $("nextm").disabled = ym>=max;
-}
-$("prevm").onclick = ()=>{ if(--state.calMonth<0){state.calMonth=11;state.calYear--;} drawCalendar(); };
-$("nextm").onclick = ()=>{ if(++state.calMonth>11){state.calMonth=0;state.calYear++;} drawCalendar(); };
-
-/* ── filtre ── */
-function buildFilters(){
-  // butoanele pe categorii, fiecare cu propria culoare
-  $("catbar").innerHTML = `<button class="fbtn on" data-cat="all">Toate</button>` +
-    CATS.map(c=>`<button class="fbtn gc g-${c.id}" data-cat="${c.id}">${c.label}</button>`).join("");
-  $("catbar").querySelectorAll("[data-cat]").forEach(b=>b.addEventListener("click",()=>{
-    $("catbar").querySelectorAll("[data-cat]").forEach(x=>x.classList.remove("on"));
-    b.classList.add("on"); state.cat=b.dataset.cat; refresh();
-  }));
-
-  // lista verticală de domenii — toate prebifate
-  $("domlist").innerHTML = state.index.domains.map(d=>
-    `<label><input type="checkbox" value="${d.id}" checked> ${d.label}</label>`).join("");
-  $("domlist").addEventListener("change",()=>{
-    state.domains = new Set([...$("domlist").querySelectorAll("input:checked")].map(i=>i.value));
-    $("domlist").querySelectorAll("label").forEach(l=>
-      l.classList.toggle("off", !l.querySelector("input").checked));
-    refresh();
+/* ── clustere domenii ── */
+const cl=document.getElementById("clusters");
+function buildClusters(){
+ cl.innerHTML="";
+ Object.entries(FAM).forEach(([fk,f])=>{
+  const box=document.createElement("div");box.className="cluster";
+  box.innerHTML=`<div class="cl-h" style="--fc:${f.c}"><b>${f.l}</b></div>`;
+  Object.entries(DOMS).filter(([,d])=>d[2]===fk).forEach(([dk,d])=>{
+   const n=LATEST.items.filter(i=>(i.domains||[]).includes(dk)).length;
+   const b=document.createElement("button");b.className="dom on";b.style.setProperty("--fc",f.c);b.dataset.k=dk;
+   b.innerHTML=`<span class="dt"></span>${d[0]}<span class="cnt">${n||"–"}</span>`;
+   b.onclick=()=>{actD.has(dk)?actD.delete(dk):actD.add(dk);render();};
+   box.appendChild(b);
   });
-  $("domall").onclick = ()=>{ $("domlist").querySelectorAll("input").forEach(i=>i.checked=true);
-    $("domlist").dispatchEvent(new Event("change")); };
-  $("domnone").onclick = ()=>{ $("domlist").querySelectorAll("input").forEach(i=>i.checked=false);
-    $("domlist").dispatchEvent(new Event("change")); };
+  cl.appendChild(box);
+ });
 }
-function refresh(){
-  if(state.selDay) showDay(state.selDay);
-  else if(state.q) showSearch();
-  else showRecent();
+document.getElementById("allD").onclick=()=>{actD=new Set(Object.keys(DOMS));render();};
+document.getElementById("noneD").onclick=()=>{actD=new Set();render();};
+
+/* ── calendar radial ── */
+const NS="http://www.w3.org/2000/svg";
+function svgel(t,at){const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;}
+async function renderOrb(){
+ const ym=monthsList[calIdx]; if(!ym)return;
+ const[Y,M]=ym.split("-").map(Number);
+ document.getElementById("orbTitle").textContent=`${MONL[M][0].toUpperCase()+MONL[M].slice(1)} ${Y}`;
+ document.getElementById("prevM").disabled=calIdx<=0;
+ document.getElementById("nextM").disabled=calIdx>=monthsList.length-1;
+ const monthItems=(await getMonth(ym)).filter(passFilters);
+ const counts={};monthItems.forEach(i=>counts[i.date]=(counts[i.date]||0)+1);
+ const svg=document.getElementById("orb");svg.innerHTML="";
+ const cx=120,cy=120,R=92,nd=new Date(Y,M,0).getDate(),tISO=todayISO();
+ svg.appendChild(svgel("circle",{class:"ring",cx,cy,r:R}));
+ let monthTotal=0;
+ for(let z=1;z<=nd;z++){
+  const dd=`${ym}-${pad(z)}`;const a=-Math.PI/2+(z-1)/nd*2*Math.PI;
+  const x=cx+R*Math.cos(a),y=cy+R*Math.sin(a);const n=counts[dd]||0,sel=dd===actDay;monthTotal+=n;
+  svg.appendChild(svgel("line",{class:"tick",x1:cx+(R-4)*Math.cos(a),y1:cy+(R-4)*Math.sin(a),x2:cx+(R+4)*Math.cos(a),y2:cy+(R+4)*Math.sin(a)}));
+  if(dd===tISO)svg.appendChild(svgel("circle",{class:"today",cx:x,cy:y,r:11}));
+  if(n){
+   const halo=svgel("circle",{class:"halo"+(sel?" sel":""),cx:x,cy:y,r:7+n*2.4,"stroke-width":Math.min(n*2,10)});
+   const pt=svgel("circle",{class:"pt has"+(sel?" sel":""),cx:x,cy:y,r:3.4+Math.min(n,6)*1.1});
+   const ti=document.createElementNS(NS,"title");ti.textContent=`${fmt(dd)} — ${n} noutăți`;pt.appendChild(ti);
+   const click=()=>{actDay=sel?null:dd;render();};
+   halo.addEventListener("click",click);pt.addEventListener("click",click);
+   svg.appendChild(halo);svg.appendChild(pt);
+  }else svg.appendChild(svgel("circle",{class:"pt",cx:x,cy:y,r:1.7}));
+  if(n||z===1||z%5===0){const lx=cx+(R+14)*Math.cos(a),ly=cy+(R+14)*Math.sin(a);
+   const tx=svgel("text",{class:"dnum"+(n?" hot":""),x:lx,y:ly+3,"text-anchor":"middle"});tx.textContent=z;svg.appendChild(tx);}
+ }
+ const sub1=svgel("text",{class:"csub",x:cx,y:cy-22});sub1.textContent=actDay&&actDay.slice(0,7)===ym?"ZIUA SELECTATĂ":"TOTAL LUNĂ";svg.appendChild(sub1);
+ const big=svgel("text",{class:"cbig",x:cx,y:cy+10});big.textContent=(actDay&&actDay.slice(0,7)===ym)?+actDay.slice(8):monthTotal;svg.appendChild(big);
+ const sub2=svgel("text",{class:"ctitle",x:cx,y:cy+32});sub2.textContent=(actDay&&actDay.slice(0,7)===ym)?MONL[M]:"noutăți";svg.appendChild(sub2);
+ document.getElementById("calReset").style.display=actDay?"block":"none";
+}
+document.getElementById("prevM").onclick=()=>{if(calIdx>0){calIdx--;renderOrb();}};
+document.getElementById("nextM").onclick=()=>{if(calIdx<monthsList.length-1){calIdx++;renderOrb();}};
+document.getElementById("calReset").querySelector("button").onclick=()=>{actDay=null;render();};
+
+/* ── puls 14 zile (din latest) ── */
+const bars=document.getElementById("bars");
+function buildPulse(){
+ bars.innerHTML="";
+ const counts={};LATEST.items.forEach(i=>counts[i.date]=(counts[i.date]||0)+1);
+ const base=new Date();base.setHours(12,0,0,0);
+ for(let i=13;i>=0;i--){const d=new Date(base);d.setDate(d.getDate()-i);const dd=d.toISOString().slice(0,10);
+  const n=counts[dd]||0;const b=document.createElement("button");b.className="bar";b.dataset.d=dd;
+  b.title=`${fmt(dd)} — ${n} noutăți`;
+  b.innerHTML=`<b style="height:${n?Math.min(6+n*5,46):3}px"></b><em>${+dd.slice(8)}</em>`;
+  b.onclick=()=>{actDay=actDay===dd?null:dd;render();};
+  bars.appendChild(b);
+ }
 }
 
-/* caseta de căutare: instant, cu mic răgaz la tastare */
-let qTimer = null;
-$("q").addEventListener("input", ()=>{
-  clearTimeout(qTimer);
-  qTimer = setTimeout(()=>{
-    state.q = $("q").value.trim();
-    state.pq = parseQuery(state.q);
-    if(!state.pq) state.q = "";
-    $("qclear").style.display = state.q ? "inline-block" : "none";
-    refresh();
-  }, 250);
+/* ── surse active + total ── */
+function buildSources(){
+ const s=document.getElementById("srcs");s.innerHTML="";
+ Object.entries(TYPES).forEach(([k,v])=>{const n=LATEST.items.filter(i=>typeOf(i.sourceCategory)===k).length;
+  s.insertAdjacentHTML("beforeend",`<div class="srcrow" style="--c:${v.c}"><i></i>${v.l}<span class="n">${n}</span></div>`);});
+ document.getElementById("tot").textContent=LATEST.items.length;
+}
+
+/* ── card ── */
+function card(i){
+ const T=TYPES[typeOf(i.sourceCategory)];
+ const doms=(i.domains||[]).filter(d=>DOMS[d]);
+ return `<article class="card" style="--tc:${T.c}">
+  <div class="meta"><span class="badge">${T.l}</span>${i.isMajor?`<span class="badge major">Act major</span>`:""}<span class="src">${esc(i.source)}</span><span class="when">${fmt(i.date)}</span></div>
+  <h4><a href="${esc(i.url)}" target="_blank" rel="noopener">${hilite(i.title)}</a></h4>
+  ${i.summary?`<p>${hilite(i.summary)}</p>`:""}
+  ${doms.length?`<div class="tags">${doms.map(d=>`<span class="tg" style="--dc:${FAM[DOMS[d][2]].c}">${esc(DOMS[d][0])}</span>`).join("")}</div>`:""}
+  ${i.impactAnalysis?`<details class="impact"${pq?" open":""}><summary>Analiză de impact</summary><p>${hilite(i.impactAnalysis)}</p></details>`:""}
+ </article>`;
+}
+
+/* ── render principal ── */
+async function render(){
+ pills.querySelectorAll(".pill[data-k]").forEach(p=>p.classList.toggle("on",actT.has(p.dataset.k)));
+ if(allBtn)allBtn.classList.toggle("on",actT.size===Object.keys(TYPES).length);
+ cl.querySelectorAll(".dom").forEach(b=>b.classList.toggle("on",actD.has(b.dataset.k)));
+ bars.querySelectorAll(".bar").forEach(b=>b.classList.toggle("on",b.dataset.d===actDay));
+
+ let pool;
+ if(actDay)pool=await getMonth(actDay.slice(0,7));
+ else if(pq){pool=[];for(const ym of monthsList)pool.push(...await getMonth(ym));}
+ else pool=LATEST.items;
+ let list=pool.filter(passFilters);
+ if(actDay)list=list.filter(i=>i.date===actDay);
+
+ const feed=document.getElementById("feed");feed.innerHTML="";
+ const by={};list.forEach(i=>(by[i.date]??=[]).push(i));
+ Object.keys(by).sort().reverse().forEach(dd=>{
+  const items=by[dd].slice().sort((a,b)=>TYPE_ORDER.indexOf(typeOf(a.sourceCategory))-TYPE_ORDER.indexOf(typeOf(b.sourceCategory)));
+  const day=document.createElement("section");day.className="day";
+  day.innerHTML=`<div class="day-h"><h3>${fmt(dd)}</h3><span class="tag">${items.length} noutăți</span></div>`+items.map(card).join("");
+  feed.appendChild(day);
+ });
+ document.getElementById("empty").style.display=list.length?"none":"block";
+
+ const ft=document.getElementById("feedTitle");
+ ft.textContent=actDay?("Ziua "+fmt(actDay)):pq?"Rezultatele căutării":"Noutățile ultimelor 14 zile";
+ document.getElementById("count").textContent=pq?`${list.length} ${list.length===1?"rezultat":"rezultate"} · „${q}”`:`${list.length} materiale`;
+ document.getElementById("clr").style.display=(actDay||pq)?"inline":"none";
+
+ if(actDay){const idx=monthsList.indexOf(actDay.slice(0,7));if(idx>=0)calIdx=idx;}
+ await renderOrb();
+}
+function clearView(){
+ if(q){document.getElementById("q").value="";q="";pq=null;}
+ actDay=null;render();
+}
+document.getElementById("clr").addEventListener("click",clearView);
+document.getElementById("clr").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")clearView();});
+
+/* ── căutare input ── */
+let qTimer=null;
+document.getElementById("q").addEventListener("input",e=>{
+ clearTimeout(qTimer);
+ qTimer=setTimeout(()=>{q=e.target.value.trim();pq=parseQuery(q);if(!pq)q="";render();},250);
 });
-$("q").addEventListener("keydown", e=>{ if(e.key==="Escape") backToFlow(); });
-$("qclear").addEventListener("click", ()=>backToFlow());
+document.getElementById("q").addEventListener("keydown",e=>{if(e.key==="Escape")clearView();});
+addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="k"){e.preventDefault();document.getElementById("q").focus();}});
 
 /* ── pornire ── */
 (async function init(){
-  const now = new Date();
-  state.calYear = now.getFullYear(); state.calMonth = now.getMonth();
-  try{
-    state.index = await getJSON("index.json");
-  }catch(e){
-    $("err").style.display="block";
-    $("err").innerHTML = `<b>Nu am putut încărca datele dashboard-ului.</b><br>
-      Detaliu tehnic: ${esc(e.message)}. Dacă vezi acest mesaj în artefactul claude.ai,
-      mediul blochează încărcarea datelor externe — folosiți link-ul alternativ al dashboard-ului.`;
-    $("updated").textContent = "date indisponibile";
-    return;
-  }
-  state.domains = new Set(state.index.domains.map(d=>d.id));   // toate prebifate
-  const gen = new Date(state.index.generatedAt);
-  $("updated").firstChild.textContent =
-    "Actualizat: " + gen.getDate()+" "+MONTH_RO[gen.getMonth()]+" "+gen.getFullYear()
-    + ", " + String(gen.getHours()).padStart(2,"0")+":"+String(gen.getMinutes()).padStart(2,"0");
-  // insigna „de la ultima vizită"
-  try{
-    const last = localStorage.getItem("ml_lastVisit");
-    if(last){
-      const latest = await getJSON("latest.json");
-      const n = latest.items.filter(it=>it.date>last.slice(0,10)).length;
-      if(n>0){ const b=$("newbadge"); b.style.display="inline-block";
-               b.textContent = n+" noutăți de la ultima vizită"; }
-    }
-    localStorage.setItem("ml_lastVisit", new Date().toISOString());
-  }catch(_){/* localStorage indisponibil în unele sandbox-uri — ignorăm */}
-  buildFilters();
-  await showRecent();
+ try{ INDEX=await getJSON("index.json"); }
+ catch(e){
+  document.getElementById("err").style.display="block";
+  document.getElementById("err").innerHTML=`<b>Nu am putut încărca datele dashboard-ului.</b><br>Detaliu: ${esc(e.message)}. Dacă vezi asta în artefactul claude.ai, mediul blochează datele externe — folosiți link-ul GitHub Pages.`;
+  document.getElementById("updated").textContent="date indisponibile";
+  return;
+ }
+ monthsList=INDEX.months.slice().sort();
+ calIdx=Math.max(0,monthsList.length-1);
+ try{ LATEST=await getJSON("latest.json"); }catch(_){ LATEST={items:[]}; }
+
+ const g=new Date(INDEX.generatedAt);
+ document.getElementById("updated").textContent="Actualizat: "+g.getDate()+" "+MONL[g.getMonth()+1]+" "+g.getFullYear()+", "+pad(g.getHours())+":"+pad(g.getMinutes());
+ try{
+  const last=localStorage.getItem("ml_lastVisit");
+  if(last){const n=LATEST.items.filter(i=>i.date>last.slice(0,10)).length;
+   if(n>0){const b=document.getElementById("nb");b.style.display="inline-block";b.textContent=n+" noutăți de la ultima vizită";}}
+  localStorage.setItem("ml_lastVisit",new Date().toISOString());
+ }catch(_){}
+
+ buildPills();buildClusters();buildPulse();buildSources();
+ await render();
 })();
 </script>
 </body>
